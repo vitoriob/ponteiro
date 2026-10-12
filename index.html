@@ -1,0 +1,1574 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ponteiro – Confinamento</title>
+<meta name="description" content="Manejo de confinamento de gado: trato, capacidade, preços, valor do rebanho e alertas sanitários. Funciona sem internet.">
+<meta name="theme-color" content="#1d4a36">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra lateral verde-pasto no computador; no celular, cabeçalho verde + barra de abas embaixo, ao alcance do polegar.
+   Identidade: verde de pasto, amarelo de brinco (etiqueta de orelha) como acento, números em fonte condensada de placa de fazenda. */
+:root{
+  --bg:#edf0ea; --surface:#ffffff; --surface-2:#f4f6f1; --ink:#16231b; --muted:#5a6b60; --line:#d6ddd3;
+  --pasto:#1d4a36; --pasto-2:#2a6449; --pasto-ink:#f3f6ef; --pasto-soft:#dfeadf;
+  --brinco:#f2c12e; --brinco-ink:#2b2200; --terra:#a65a32;
+  --danger:#b3261e; --danger-bg:#fbe5e2; --warn:#8f5b00; --warn-bg:#fdf0d2; --ok:#2b7a4b; --ok-bg:#e0f1e5; --info:#28597f; --info-bg:#e2edf6;
+  --shadow:0 1px 2px rgba(22,35,27,.06),0 4px 14px rgba(22,35,27,.05);
+  --f-num:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px; --link:#2a6449;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1511; --surface:#16201a; --surface-2:#1c2821; --ink:#e5ece6; --muted:#9bb0a2; --line:#2a3a31;
+    --pasto:#123325; --pasto-2:#1d4a36; --pasto-ink:#e8f0e9; --pasto-soft:#20392c;
+    --brinco:#f2c12e; --brinco-ink:#2b2200; --terra:#d98a5f;
+    --danger:#ff9b90; --danger-bg:#3a1c19; --warn:#f3c76a; --warn-bg:#352a12; --ok:#86d3a2; --ok-bg:#1a3324; --info:#9cc6ec; --info-bg:#182a3a;
+    --shadow:0 1px 2px rgba(0,0,0,.3); --link:#86d3a2; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1511; --surface:#16201a; --surface-2:#1c2821; --ink:#e5ece6; --muted:#9bb0a2; --line:#2a3a31;
+  --pasto:#123325; --pasto-2:#1d4a36; --pasto-ink:#e8f0e9; --pasto-soft:#20392c;
+  --brinco:#f2c12e; --brinco-ink:#2b2200; --terra:#d98a5f;
+  --danger:#ff9b90; --danger-bg:#3a1c19; --warn:#f3c76a; --warn-bg:#352a12; --ok:#86d3a2; --ok-bg:#1a3324; --info:#9cc6ec; --info-bg:#182a3a;
+  --shadow:0 1px 2px rgba(0,0,0,.3); --link:#86d3a2; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body)}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:3px solid var(--brinco);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- Estrutura ---------- */
+.app{min-height:100vh}
+.side{display:none}
+.top{position:sticky;top:0;z-index:6;background:var(--pasto);color:var(--pasto-ink);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;align-items:center;gap:10px}
+.marca{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.marca svg{flex:0 0 34px}
+.marca b{font-family:var(--f-num);font-size:22px;letter-spacing:.04em;line-height:1}
+.marca small{display:block;font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sinal{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.12);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.sinal i{width:8px;height:8px;border-radius:50%;background:#7fe0a3;display:inline-block}
+.sinal.off i{background:var(--brinco)}
+.perfil{background:rgba(255,255,255,.1);color:inherit;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:6px 8px;font-size:13px;max-width:130px}
+.perfil option{color:#16231b;background:#fff}
+main{max-width:1080px;margin:0 auto;padding:18px 16px 110px}
+.abas{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.abas button{flex:1;border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:11.5px;font-weight:600;border-radius:12px;cursor:pointer;min-width:0}
+.abas button svg{width:24px;height:24px}
+.abas button.on{color:var(--pasto-2)}
+.abas button.on svg{background:var(--pasto-soft);border-radius:99px;padding:2px 12px;width:48px;box-sizing:content-box;margin:0 -12px}
+:root[data-theme="dark"] .abas button.on{color:var(--ok)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .abas button.on{color:var(--ok)}}
+.folha{position:fixed;inset:0;z-index:9;background:rgba(10,20,14,.45);display:flex;align-items:flex-end}
+.folha .card{width:100%;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));margin:0}
+.folha .item{display:flex;align-items:center;gap:12px;width:100%;padding:14px 10px;border:0;background:none;color:var(--ink);font-size:16px;font-weight:600;border-radius:12px;cursor:pointer;text-align:left}
+.folha .item:hover{background:var(--surface-2)}
+.folha .item svg{width:22px;height:22px;color:var(--pasto-2)}
+
+@media (min-width:900px){
+  .app{display:grid;grid-template-columns:248px 1fr}
+  .top,.abas{display:none}
+  .side{display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;background:var(--pasto);color:var(--pasto-ink);padding:22px 14px}
+  .side .marca{flex:0;margin:0 6px 22px}
+  .side nav{display:flex;flex-direction:column;gap:2px;flex:1}
+  .side nav button{display:flex;align-items:center;gap:12px;border:0;background:none;color:inherit;opacity:.82;padding:10px 12px;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;text-align:left}
+  .side nav button svg{width:20px;height:20px}
+  .side nav button:hover{background:rgba(255,255,255,.07);opacity:1}
+  .side nav button.on{background:rgba(255,255,255,.12);opacity:1;font-weight:600;box-shadow:inset 3px 0 0 var(--brinco)}
+  .side .rodape{display:flex;flex-direction:column;gap:8px;padding:12px 6px 0;border-top:1px solid rgba(255,255,255,.12)}
+  .side .perfil{max-width:none;width:100%}
+  main{padding:28px 32px 48px}
+}
+
+/* ---------- Tipografia ---------- */
+h1.tit{font-family:var(--f-num);font-weight:700;font-size:30px;letter-spacing:.01em;line-height:1.1;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+h2{font-family:var(--f-num);font-weight:600;font-size:21px;margin:26px 0 10px;letter-spacing:.01em;text-wrap:balance}
+h3{font-size:16px;font-weight:700;margin:0}
+.rot{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted);font-size:13.5px}
+.n,.num{font-variant-numeric:tabular-nums}
+.big{font-family:var(--f-num);font-weight:700;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:18px;font-weight:600;margin-left:3px;color:var(--muted)}
+
+/* ---------- Blocos ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);min-width:0}
+.grade{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:12px}
+.grade > .card{margin:0}
+.grade.g3{grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.grade.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.grade.g3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.kpi{display:flex;flex-direction:column;gap:6px;margin:0}
+.kpi .v{font-family:var(--f-num);font-weight:700;font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--muted);line-height:1.3}
+.barra{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.barra i{display:block;height:100%;background:var(--pasto-2);border-radius:99px}
+.barra.alta i{background:var(--terra)}
+
+.heroi{background:var(--pasto);color:var(--pasto-ink);border:0;position:relative;overflow:hidden;padding:20px}
+.heroi::after{content:"";position:absolute;inset:auto -40px -60px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(242,193,46,.22),transparent 70%)}
+.heroi .rot{color:var(--pasto-ink);opacity:.75}
+.heroi .big{font-size:48px;color:var(--pasto-ink)}
+.heroi .big small{color:var(--pasto-ink);opacity:.7}
+.heroi .linha{display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:10px;font-size:14px;opacity:.9}
+.heroi .b{background:var(--brinco);color:var(--brinco-ink);border-color:var(--brinco)}
+
+/* Brinco: a etiqueta amarela de orelha que identifica o lote */
+.brinco{flex:0 0 auto;width:44px;height:50px;background:var(--brinco);color:var(--brinco-ink);border-radius:12px 12px 16px 16px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font-family:var(--f-num);font-weight:700;font-size:17px;position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.brinco::before{content:"";position:absolute;top:7px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--surface);box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+.brinco.sm{width:34px;height:40px;font-size:14px;border-radius:10px 10px 13px 13px}
+.brinco.sm::before{top:5px;width:8px;height:8px;margin-left:-4px}
+
+.lote-cab{display:flex;gap:12px;align-items:center}
+.lote-cab .nome{flex:1;min-width:0}
+.lote-cab .nome h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.chip.danger{background:var(--danger-bg);color:var(--danger);border-color:transparent}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0 12px}
+.stats div{display:flex;flex-direction:column}
+.stats b{font-family:var(--f-num);font-size:22px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--muted)}
+
+/* Régua de engorda: entrada → hoje → abate */
+.regua{position:relative;margin:6px 0 4px}
+.regua .trilho{height:10px;border-radius:99px;background:repeating-linear-gradient(90deg,var(--surface-2) 0 9px,var(--line) 9px 10px);border:1px solid var(--line);overflow:hidden}
+.regua .trilho i{display:block;height:100%;background:linear-gradient(90deg,var(--pasto-2),var(--ok));border-radius:99px}
+.regua .marcas{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* Alertas */
+.alertas{display:flex;flex-direction:column;gap:8px}
+.alerta{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--muted);border-radius:12px;padding:12px 14px;font-size:14.5px;line-height:1.4}
+.alerta svg{flex:0 0 20px;width:20px;height:20px;margin-top:1px}
+.alerta.danger{border-left-color:var(--danger)} .alerta.danger svg{color:var(--danger)}
+.alerta.warn{border-left-color:var(--warn)} .alerta.warn svg{color:var(--warn)}
+.alerta.info{border-left-color:var(--info)} .alerta.info svg{color:var(--info)}
+.alerta.ok{border-left-color:var(--ok)} .alerta.ok svg{color:var(--ok)}
+.alerta .txt{flex:1;min-width:0}
+.alerta a{color:var(--link);font-weight:600;white-space:nowrap}
+.aviso{border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+.aviso.warn{background:var(--warn-bg);color:var(--warn)}
+.aviso.info{background:var(--info-bg);color:var(--info)}
+.aviso.ok{background:var(--ok-bg);color:var(--ok)}
+.aviso.danger{background:var(--danger-bg);color:var(--danger)}
+
+/* Tabelas */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Botões e formulários */
+.b{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--pasto-2);background:var(--pasto-2);color:#fff;padding:10px 16px;border-radius:11px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none}
+.b:hover{filter:brightness(1.08)}
+.s{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
+.s:hover{background:var(--surface-2)}
+.s.d{color:var(--danger)}
+.s svg,.b svg{width:16px;height:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.entre{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.entre > div{min-width:0}
+form .f{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+label{display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--muted);gap:5px}
+input,select,textarea{font-size:16px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink);width:100%}
+input:focus,select:focus{border-color:var(--pasto-2);outline:none;box-shadow:0 0 0 3px var(--pasto-soft)}
+.form{border-color:var(--pasto-2);border-width:2px}
+.form h3{margin-bottom:12px}
+
+/* Leitura de cocho */
+.notas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.notas button{min-height:64px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:12px;font-size:12px;cursor:pointer;padding:6px 2px;line-height:1.2}
+.notas button b{display:block;font-family:var(--f-num);font-size:24px;line-height:1}
+.notas button span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.notas button.sel{border-color:var(--pasto-2);background:var(--pasto-soft);box-shadow:inset 0 0 0 1px var(--pasto-2)}
+.notas button:hover{border-color:var(--pasto-2)}
+.cocho-fig{display:flex;gap:6px;align-items:flex-end;height:14px;margin:4px auto 4px;width:34px}
+.trato-num{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 4px}
+.trato-num .big{font-size:28px}
+@media (min-width:700px){.trato-num .big{font-size:36px}}
+details summary{cursor:pointer;color:var(--link);font-size:14px;font-weight:600;margin-top:8px}
+
+/* Preços */
+.preco .v{font-family:var(--f-num);font-weight:700;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.preco .u{font-size:12.5px;color:var(--muted)}
+.tag-op{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px}
+.tag-op.venda{background:var(--ok-bg);color:var(--ok)}
+.tag-op.compra{background:var(--info-bg);color:var(--info)}
+.resultado{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+@media (min-width:700px){.resultado{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+.vazio{text-align:center;padding:32px 16px}
+.vazio svg{width:120px;height:auto;margin-bottom:10px}
+.modal{position:fixed;inset:0;background:rgba(10,20,14,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal .card{max-width:380px;width:100%}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;box-shadow:var(--shadow)}
+@media (min-width:900px){.toast{bottom:24px}}
+.hide-sm{display:none}
+@media (min-width:700px){.hide-sm{display:table-cell}}
+
+/* Etapas, botões de opção e navegação curral a curral */
+.segm{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 0 14px;overflow-x:auto}
+.segm button,.segm .opt span{flex:1;white-space:nowrap;border:0;background:none;color:var(--muted);padding:9px 12px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;display:block;text-align:center}
+.segm button.on,.segm .opt input:checked + span{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.segm .opt{flex:1;display:block;color:inherit;font-size:inherit;position:relative}
+.segm .opt input{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.segm.grande{flex-wrap:wrap}
+.notas.grande button{min-height:84px;font-size:13px}
+.notas.grande button b{font-size:30px}
+.pontos{display:flex;gap:5px}
+.pontos i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.pontos i.ok{background:var(--ok)}
+.pontos i.on{outline:2px solid var(--brinco);outline-offset:1px}
+.hist{display:flex;gap:10px;align-items:flex-end;margin-top:8px;height:64px}
+.hist div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.hist i{width:18px;border-radius:5px 5px 2px 2px;background:var(--ok)}
+.hist i.n2{background:var(--brinco)} .hist i.n3,.hist i.n4{background:var(--danger)}
+.nav-curral{position:relative;bottom:calc(76px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:space-between;padding:10px 0;z-index:3}
+.nav-curral.fixo{position:sticky}
+.nav-curral .b,.nav-curral .s{flex:1;justify-content:center;padding:14px;font-size:16px}
+.nav-curral .s[disabled]{opacity:.4}
+@media (min-width:900px){.nav-curral{bottom:0}}
+.barra-h{height:6px;border-radius:99px;background:rgba(255,255,255,.15);margin-top:12px;overflow:hidden;position:relative;z-index:1}
+.barra-h i{display:block;height:100%;background:var(--brinco)}
+.b.ghost{background:transparent;color:var(--pasto-ink);border-color:rgba(255,255,255,.4)}
+.b[disabled]{opacity:.45;cursor:not-allowed}
+.grade.g3c{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stats.ind{border-top:1px dashed var(--line);padding-top:12px;margin-top:12px}
+.stats.ind b{font-size:19px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:12px}}
+.forn.feito{border-color:var(--ok);background:linear-gradient(0deg,var(--ok-bg),var(--ok-bg)) padding-box}
+.forn .b{padding:12px 16px}
+.relatorio{white-space:pre-wrap;font:14px/1.55 var(--f-body);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.zap{color:#1a7f45}
+textarea{font:15px/1.4 var(--f-body)}
+code{background:var(--surface-2);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <div>
+    <header class="top" id="top"></header>
+    <main id="app"></main>
+  </div>
+</div>
+<nav class="abas" id="abas"></nav>
+
+<script>
+'use strict';
+// ====================== Dados ======================
+const CHAVE = 'aumcg-v1';
+const UFS = {
+  SP:'São Paulo', MS:'Mato Grosso do Sul', MT:'Mato Grosso', GO:'Goiás', MG:'Minas Gerais',
+  PR:'Paraná', BA:'Bahia', TO:'Tocantins', RO:'Rondônia', PA:'Pará', MA:'Maranhão', RS:'Rio Grande do Sul'
+};
+// Referência inicial: Indicador do Boi Gordo CEPEA/B3 (SP), média de agosto/2026 = R$ 345,92/@.
+// Demais estados e categorias são ESTIMATIVAS por diferencial regional típico. Confira e atualize.
+const DIF_UF = {SP:1,MS:.97,MT:.95,GO:.97,MG:.98,PR:1,BA:.96,TO:.94,RO:.92,PA:.92,MA:.93,RS:.98};
+function precosIniciais(){
+  const porUF = {};
+  for(const uf in UFS){
+    const g = Math.round(345.92*DIF_UF[uf]*100)/100;
+    porUF[uf] = { boiGordo:g, vacaGorda:Math.round(g*.93*100)/100, boiMagro:Math.round(g*1.05*100)/100, bezerro:Math.round(3300*DIF_UF[uf]/10)*10, estimado: uf!=='SP' };
+  }
+  porUF.SP.estimado = false;
+  return { atualizadoEm:'2026-08-31', fonte:'CEPEA/B3 média ago/2026 (SP); demais UFs e categorias estimadas', porUF, historico:[] };
+}
+const REGRA_COCHO = [
+  {nota:0, nome:'Limpo', ajuste:5}, {nota:1, nome:'Pouca sobra', ajuste:0}, {nota:2, nome:'Sobra média', ajuste:-5},
+  {nota:3, nome:'Muita sobra', ajuste:-10}, {nota:4, nome:'Intocado', ajuste:-15},
+];
+function estadoInicial(){
+  return {
+    versao:2,
+    config:{ papel:'gerente', uf:'SP', rendimento:52, msPctPV:2.3, nTratos:4, divisaoTratos:'30,20,25,25', capVagao:6000, outrosCabDia:3,
+      m2PorCab:12, cmCochoPorCab:40, cmBebedouroPorCab:4, diasAviso:7, pesoAbate:540, urlPrecos:'', fazenda:'', lat:'', lon:'',
+      regraCocho: REGRA_COCHO.map(r=>({...r})) },
+    dietas:[], currais:[], lotes:[], pesagens:[], sanidade:[], ocorrencias:[], leituras:[],
+    fornecimentos:[], estoque:{}, entradas:[], despesas:[], animais:[], movimentos:[], clima:null,
+    precos: precosIniciais()
+  };
+}
+let S;
+function carregar(){
+  try { const t = localStorage.getItem(CHAVE); S = t ? JSON.parse(t) : estadoInicial(); }
+  catch(e){ S = estadoInicial(); }
+  normalizar();
+}
+const chaveIngr = n => String(n||'').trim().toLowerCase();
+function normalizar(){
+  const base = estadoInicial();
+  for(const k in base) if(S[k]===undefined) S[k]=base[k];
+  for(const k in base.config) if(S.config[k]===undefined) S.config[k]=base.config[k];
+  // Versão 1 guardava o estoque dentro de cada dieta; agora é um estoque único por ingrediente.
+  for(const d of S.dietas) for(const i of d.ingredientes){
+    const k = chaveIngr(i.nome);
+    if(!S.estoque[k]) S.estoque[k] = {nome:i.nome, kg:num(i.estoque)};
+    delete i.estoque;
+  }
+  S.versao = 2;
+}
+function salvar(){
+  S.modificadoEm = new Date().toISOString();
+  try { localStorage.setItem(CHAVE, JSON.stringify(S)); } catch(e){ toast('Não foi possível salvar no aparelho'); }
+}
+const id = () => Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+
+// ====================== Utilidades ======================
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = (v,d=0) => (isFinite(v)?v:0).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const brl = v => (isFinite(v)?v:0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const brl2 = v => (isFinite(v)?v:0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const hoje = () => { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
+const dias = (a,b) => Math.round((new Date(b+'T12:00')-new Date(a+'T12:00'))/864e5);
+const somaDias = (d,n) => { const x=new Date(d+'T12:00'); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); };
+const dbr = d => d ? d.split('-').reverse().join('/') : '–';
+const num = v => { const n = parseFloat(String(v??'').replace(',','.')); return isFinite(n)?n:0; };
+function confirmar(msg, fn){
+  const d=document.createElement('div'); d.className='modal';
+  d.innerHTML=`<div class="card"><p style="margin-top:0">${esc(msg)}</p><div class="row"><button class="b" id="cm-ok">Confirmar</button><button class="s" id="cm-no">Cancelar</button></div></div>`;
+  document.body.appendChild(d);
+  d.querySelector('#cm-ok').onclick=()=>{d.remove();fn();}; d.querySelector('#cm-no').onclick=()=>d.remove();
+}
+function toast(m){ document.querySelectorAll('.toast').forEach(t=>t.remove()); const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2400); }
+const porId = (lista,i) => S[lista].find(x=>x.id===i);
+const cap = t => t.charAt(0).toUpperCase()+t.slice(1);
+const nomeL = l => /^lote/i.test(l.nome)?esc(l.nome):'lote '+esc(l.nome);
+const nomeC = c => /^curral/i.test(c.nome)?esc(c.nome):'Curral '+esc(c.nome);
+const lotesAtivos = () => S.lotes.filter(l=>l.ativo!==false);
+const ordemRota = l => { const c = porId('currais', l.curralId); return c ? num(c.ordem)||999 : 9999; };
+const lotesRota = () => lotesAtivos().slice().sort((a,b)=>ordemRota(a)-ordemRota(b));
+function divisao(){
+  const n = Math.max(1, Math.round(num(S.config.nTratos)));
+  let p = String(S.config.divisaoTratos||'').split(/[,;\s]+/).map(num).filter(x=>x>0);
+  if(p.length!==n) p = Array(n).fill(100/n);
+  const t = p.reduce((a,b)=>a+b,0);
+  return p.map(x=>x/t);
+}
+const regra = nota => (S.config.regraCocho||REGRA_COCHO).find(r=>r.nota===num(nota)) || {ajuste:0, nome:''};
+
+// ====================== Cálculos ======================
+function cabecasAtuais(l){
+  const baixas = S.ocorrencias.filter(o=>o.loteId===l.id && (o.tipo==='morte'||o.tipo==='saida')).reduce((s,o)=>s+num(o.cabecas),0);
+  return Math.max(0, num(l.cabecas)-baixas);
+}
+function gmdLote(l){
+  // GMD real pela última pesagem, se houver; senão o esperado.
+  const ps = S.pesagens.filter(p=>p.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1);
+  if(ps[0] && dias(l.dataEntrada, ps[0].data)>=14) return (num(ps[0].pesoMedio)-num(l.pesoEntrada))/dias(l.dataEntrada, ps[0].data);
+  return num(l.gmd);
+}
+function pesoAtual(l, data=hoje()){
+  const ps = S.pesagens.filter(p=>p.loteId===l.id && p.data<=data).sort((a,b)=>a.data<b.data?1:-1);
+  const ref = ps[0] ? {data:ps[0].data, peso:num(ps[0].pesoMedio)} : {data:l.dataEntrada, peso:num(l.pesoEntrada)};
+  return ref.peso + gmdLote(l)*Math.max(0,dias(ref.data,data));
+}
+const diasCocho = l => Math.max(0, dias(l.dataEntrada, l.fechamento ? l.fechamento.data : hoje()));
+function dietaAtual(l){
+  // Plano de adaptação: troca de dieta conforme os dias de cocho.
+  const plano = (l.plano||[]).filter(p=>p.dietaId && num(p.ateDia)>0).sort((a,b)=>num(a.ateDia)-num(b.ateDia));
+  const d = diasCocho(l);
+  for(const p of plano) if(d <= num(p.ateDia)) return porId('dietas', p.dietaId);
+  return porId('dietas', l.dietaId);
+}
+function proximaTroca(l){
+  const plano = (l.plano||[]).filter(p=>p.dietaId && num(p.ateDia)>0).sort((a,b)=>num(a.ateDia)-num(b.ateDia));
+  const d = diasCocho(l);
+  for(let i=0;i<plano.length;i++) if(d <= num(plano[i].ateDia)){
+    const prox = plano[i+1] ? porId('dietas',plano[i+1].dietaId) : porId('dietas', l.dietaId);
+    return {emDias: num(plano[i].ateDia)-d+1, dieta: prox};
+  }
+  return null;
+}
+function dietaInfo(d){
+  // Inclusão em % da matéria seca (MS). kg de matéria natural (MN) por kg de MS = Σ incl/MS%.
+  if(!d || !d.ingredientes.length) return {mnPorMs:0, msPct:0, custoKgMS:0, custoKgMN:0, somaIncl:0};
+  let mnPorMs=0, custo=0, soma=0;
+  for(const i of d.ingredientes){
+    const f = num(i.inclusao)/100, ms = Math.max(.01,num(i.ms)/100);
+    soma += num(i.inclusao); mnPorMs += f/ms; custo += (f/ms)*num(i.custo);
+  }
+  return {mnPorMs, msPct: mnPorMs?100/mnPorMs:0, custoKgMS:custo, custoKgMN: mnPorMs?custo/mnPorMs:0, somaIncl:soma};
+}
+function tratoLote(l){
+  const d = dietaAtual(l), di = dietaInfo(d);
+  const cab = cabecasAtuais(l), pv = pesoAtual(l);
+  const msCab = pv*num(S.config.msPctPV)/100*(1+num(l.ajuste||0)/100);
+  const msTotal = msCab*cab, mnTotal = msTotal*di.mnPorMs;
+  const ingr = d ? d.ingredientes.map(i=>({nome:i.nome, kg: msTotal*(num(i.inclusao)/100)/Math.max(.01,num(i.ms)/100)})) : [];
+  return {cab, pv, msCab, msTotal, mnTotal, mnCab: cab?mnTotal/cab:0, custoDia: msTotal*di.custoKgMS, custoCab: msCab*di.custoKgMS, ingr, dieta:d, di};
+}
+const fornDoDia = (loteId, data=hoje()) => S.fornecimentos.filter(f=>f.loteId===loteId && f.data===data);
+function previstoTrato(l, k){
+  // Divide o total do dia pelos tratos (% por horário). Se um trato anterior saiu a mais ou a menos, o restante é redistribuído.
+  const t = tratoLote(l), p = divisao(), feitos = fornDoDia(l.id);
+  if(feitos.some(f=>f.trato===k)) return feitos.find(f=>f.trato===k).kgPrevisto;
+  const entregue = feitos.reduce((s,f)=>s+num(f.kgReal),0);
+  const restantes = p.map((x,i)=>i).filter(i=>!feitos.some(f=>f.trato===i+1));
+  const pesoRest = restantes.reduce((s,i)=>s+p[i],0);
+  return Math.max(0, (t.mnTotal - entregue) * p[k-1] / (pesoRest||1));
+}
+function capacidadeCurral(c){
+  const area = Math.floor(num(c.area)/Math.max(.1,num(S.config.m2PorCab)));
+  const cocho = Math.floor(num(c.cocho)*100/Math.max(1,num(S.config.cmCochoPorCab)));
+  const beb = Math.floor(num(c.bebedouro)/Math.max(.1,num(S.config.cmBebedouroPorCab)));
+  const lims = [{n:'area',v:area},{n:'cocho',v:cocho}];
+  if(num(c.bebedouro)>0) lims.push({n:'bebedouro',v:beb});
+  const min = lims.reduce((a,b)=>b.v<a.v?b:a);
+  const ocup = lotesAtivos().filter(l=>l.curralId===c.id).reduce((s,l)=>s+cabecasAtuais(l),0);
+  return {area, cocho, beb, max:min.v, limitante:min.n, ocup};
+}
+function estoqueDias(){
+  const cons = {};
+  for(const l of lotesAtivos()) for(const i of tratoLote(l).ingr){ const k=chaveIngr(i.nome); cons[k] = (cons[k]||0)+i.kg; }
+  return Object.entries(S.estoque).map(([k,e])=>({chave:k, nome:e.nome, consumo:cons[k]||0, estoque:num(e.kg), dias: cons[k]>0 ? num(e.kg)/cons[k] : Infinity}));
+}
+function baixarEstoque(dieta, kgMN, sinal=1){
+  if(!dieta) return;
+  const di = dietaInfo(dieta);
+  for(const i of dieta.ingredientes){
+    const k = chaveIngr(i.nome), frac = (num(i.inclusao)/100/Math.max(.01,num(i.ms)/100))/Math.max(.0001,di.mnPorMs);
+    if(!S.estoque[k]) S.estoque[k] = {nome:i.nome, kg:0};
+    S.estoque[k].kg = num(S.estoque[k].kg) - sinal*kgMN*frac;
+  }
+}
+function precoUF(){ return S.precos.porUF[S.config.uf] || S.precos.porUF.SP; }
+
+// Indicadores zootécnicos e econômicos de um lote
+function indicadores(l){
+  const p = precoUF(), cab = l.fechamento ? num(l.fechamento.cabecas) : cabecasAtuais(l), pv = l.fechamento ? num(l.fechamento.peso) : pesoAtual(l), rend = num(S.config.rendimento)/100;
+  const dc = Math.max(1, diasCocho(l)), g = gmdLote(l), t = tratoLote(l);
+  const forn = S.fornecimentos.filter(f=>f.loteId===l.id);
+  const diasComForn = new Set(forn.map(f=>f.data)).size;
+  const custoForn = forn.reduce((s,f)=>s+num(f.kgReal)*num(f.custoKgMN),0);
+  const mnReal = forn.reduce((s,f)=>s+num(f.kgReal),0);
+  const msReal = forn.reduce((s,f)=>s+num(f.kgReal)*num(f.msPct)/100,0);
+  // Dias sem registro de trato são estimados pelo previsto.
+  const diasSem = Math.max(0, dc - diasComForn);
+  const custoAlim = custoForn + diasSem*t.custoDia;
+  const cmsCab = diasComForn ? msReal/diasComForn/Math.max(1,cab) : t.msCab;
+  const pvMedio = (num(l.pesoEntrada)+pv)/2;
+  const despesas = S.despesas.filter(d=>d.loteId===l.id).reduce((s,d)=>s+num(d.valor),0);
+  const outros = num(S.config.outrosCabDia)*cab*dc + despesas;
+  const compra = num(l.custoCompra) || (num(l.pesoEntrada)/30*p.boiMagro*num(l.cabecas));
+  const arrobasEntrada = num(l.pesoEntrada)*rend/15; // mesma base de rendimento: @ produzidas = ganho de peso em carcaça
+  const arrobasHoje = pv*rend/15;
+  const arrobasProd = Math.max(0, (arrobasHoje-arrobasEntrada)*cab);
+  const custoProd = custoAlim + outros;
+  const custoCabDia = (t.custoCab + num(S.config.outrosCabDia));
+  const custoProxArroba = g>0 ? custoCabDia/(g*rend/15) : Infinity;
+  const alvo = num(l.pesoAbate)||num(S.config.pesoAbate);
+  const diasAbate = g>0 ? Math.max(0,Math.ceil((alvo-pv)/g)) : null;
+  const vendaHoje = arrobasHoje*cab*p.boiGordo;
+  const vendaAlvo = alvo*rend/15*cab*p.boiGordo;
+  const custoAteAlvo = custoProd + custoCabDia*cab*(diasAbate||0);
+  const morte = S.ocorrencias.filter(o=>o.loteId===l.id && o.tipo==='morte').reduce((s,o)=>s+num(o.cabecas),0);
+  return {cab, pv, g, dc, cmsCab, cmsPct: cmsCab/Math.max(1,pvMedio)*100, conversao: g>0 ? cmsCab/g : null,
+    custoAlim, outros, despesas, compra, custoProd, custoCabDia, custoArroba: arrobasProd>0 ? custoProd/arrobasProd : null,
+    arrobasProd, arrobasHoje: arrobasHoje*cab, custoProxArroba, diasAbate, dataAbate: diasAbate!=null?somaDias(hoje(),diasAbate):null,
+    vendaHoje, vendaAlvo, margemHoje: vendaHoje-compra-custoProd, margemAlvo: vendaAlvo-compra-custoAteAlvo,
+    reposicao: num(l.pesoEntrada)/30*p.boiMagro*cab, mortalidade: num(l.cabecas)? morte/num(l.cabecas)*100 : 0, diasComForn};
+}
+// Compatibilidade com telas antigas
+function valorLote(l){ const i = indicadores(l); return {cab:i.cab, pv:i.pv, arrobas:i.arrobasHoje, venda:i.vendaHoje, compra:i.compra, reposicao:i.reposicao, diasAbate:i.diasAbate, dataAbate:i.dataAbate, vendaAlvo:i.vendaAlvo, margem:i.margemAlvo, diasCocho:diasCocho(l)}; }
+
+// ====================== Sanidade ======================
+const PROTOCOLO_PADRAO = [
+  {dia:0, tipo:'Vacina', produto:'Clostridioses (polivalente)', carencia:0},
+  {dia:30, tipo:'Vacina', produto:'Clostridioses – reforço', carencia:0},
+  {dia:0, tipo:'Vacina', produto:'Doenças respiratórias (IBR/BVD/PI3/BRSV)', carencia:0},
+  {dia:21, tipo:'Vacina', produto:'Doenças respiratórias – reforço', carencia:0},
+  {dia:0, tipo:'Vermífugo', produto:'Endo/ectoparasiticida (conforme prescrição)', carencia:35},
+  {dia:0, tipo:'Outro', produto:'Identificação, pesagem e triagem de entrada', carencia:0},
+];
+function aplicarProtocolo(l){
+  for(const p of PROTOCOLO_PADRAO){
+    S.sanidade.push({id:id(), loteId:l.id, data:somaDias(l.dataEntrada,p.dia), tipo:p.tipo, produto:p.produto, carencia:p.carencia, feito:false, obs:'Sugestão do protocolo padrão. Confirme com o veterinário.'});
+  }
+}
+function carenciaAte(l){
+  let fim=null;
+  for(const s of S.sanidade) if(s.loteId===l.id && s.feito && num(s.carencia)>0){
+    const f = somaDias(s.dataFeito||s.data, num(s.carencia)); if(!fim||f>fim) fim=f;
+  }
+  return fim;
+}
+// Índice de Temperatura e Umidade (ITU) para bovinos de corte
+const itu = (t, ur) => 0.8*t + (ur/100)*(t-14.4) + 46.4;
+const faixaITU = v => v>=84?{n:'danger',t:'emergência'}: v>=79?{n:'danger',t:'perigo'}: v>=72?{n:'warn',t:'alerta'}:{n:'ok',t:'conforto'};
+
+// ====================== Alertas ======================
+function alertas(){
+  const A = [], h = hoje(), aviso = num(S.config.diasAviso), p = precoUF();
+  for(const s of S.sanidade){
+    if(s.feito) continue;
+    const l = porId('lotes', s.loteId); if(!l || l.ativo===false) continue;
+    const dd = dias(h, s.data);
+    if(dd<0) A.push({n:'danger', t:`<b>${esc(s.tipo)} atrasado</b> em ${nomeL(l)}: ${esc(s.produto)} (previsto ${dbr(s.data)}). Aplicar e marcar como feito.`, aba:'sanidade'});
+    else if(dd<=aviso) A.push({n:'warn', t:`<b>${esc(s.tipo)}</b> em ${nomeL(l)} ${dd===0?'<b>hoje</b>':'em '+dd+' dia(s)'}: ${esc(s.produto)}.`, aba:'sanidade'});
+  }
+  const enf = S.animais.filter(a=>a.status==='enfermaria');
+  if(enf.length) A.push({n:'warn', t:`<b>${enf.length} animal(is) na enfermaria</b>. Revisar tratamento e dar alta ou registrar o desfecho.`, aba:'sanidade'});
+  for(const l of lotesAtivos()){
+    const i = indicadores(l), car = carenciaAte(l);
+    if(car && car>=h){
+      if(i.dataAbate && car>i.dataAbate) A.push({n:'danger', t:`<b>Carência</b> de ${nomeL(l)} vai até ${dbr(car)}, depois do abate previsto (${dbr(i.dataAbate)}). O embarque fica bloqueado até lá.`, aba:'sanidade'});
+      else A.push({n:'info', t:`${cap(nomeL(l))} em <b>carência</b> até ${dbr(car)}. Embarque bloqueado até essa data.`, aba:'sanidade'});
+    }
+    const ls = S.leituras.filter(x=>x.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1);
+    if(ls.length>=2 && num(ls[0].nota)>=3 && num(ls[1].nota)>=3 && dias(ls[0].data,h)<=2) A.push({n:'danger', t:`${cap(nomeL(l))} com <b>sobra alta em leituras seguidas</b>. O trato já foi reduzido; chame o nutricionista e confira saúde e água.`, aba:'trato'});
+    else if(ls[0] && dias(ls[0].data,h)<=1 && num(ls[0].nota)>=3) A.push({n:'warn', t:`<b>Queda de consumo</b> em ${nomeL(l)} (nota ${ls[0].nota}). Trato reduzido ${Math.abs(regra(ls[0].nota).ajuste)}%. Confira bebedouro e animais doentes.`, aba:'trato'});
+    const doentes = S.ocorrencias.filter(o=>o.loteId===l.id && o.tipo==='doente' && dias(o.data,h)<=7).reduce((s,o)=>s+num(o.cabecas),0);
+    if(doentes>0) A.push({n: doentes/Math.max(1,i.cab)>=.05?'danger':'warn', t:`<b>${doentes} animal(is) doente(s)</b> em ${nomeL(l)} nos últimos 7 dias.`, aba:'sanidade'});
+    if(i.mortalidade>1) A.push({n:'danger', t:`Mortalidade de ${nomeL(l)} em <b>${nf(i.mortalidade,1)}%</b> (referência: até 1%).`, aba:'sanidade'});
+    // Ponto ótimo de abate: quando produzir a próxima arroba custa mais do que ela vale.
+    if(isFinite(i.custoProxArroba) && i.custoProxArroba > p.boiGordo && diasCocho(l)>30) A.push({n:'warn', t:`<b>Ponto de abate</b>: em ${nomeL(l)} a próxima @ custa ${brl2(i.custoProxArroba)} e vale ${brl2(p.boiGordo)}. Manter no cocho reduz o lucro; avalie vender.`, aba:'mercado'});
+    else if(i.diasAbate===0) A.push({n:'ok', t:`${cap(nomeL(l))} atingiu o <b>peso de abate</b> (${nf(i.pv)} kg). Hora de negociar.`, aba:'mercado'});
+    else if(i.diasAbate!=null && i.diasAbate<=15) A.push({n:'info', t:`${cap(nomeL(l))} chega ao peso de abate em ~${i.diasAbate} dias (${dbr(i.dataAbate)}). Comece a negociar a venda.`, aba:'mercado'});
+    const pt = proximaTroca(l);
+    if(pt && pt.emDias<=1 && pt.dieta) A.push({n:'info', t:`${cap(nomeL(l))} muda para a dieta <b>${esc(pt.dieta.nome)}</b> ${pt.emDias<=0?'hoje':'amanhã'} (plano de adaptação).`, aba:'trato'});
+    const ultP = S.pesagens.filter(x=>x.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1)[0];
+    const refP = ultP?ultP.data:l.dataEntrada;
+    if(dias(refP,h)>45) A.push({n:'info', t:`${cap(nomeL(l))} sem pesagem há ${dias(refP,h)} dias. Pese para corrigir o trato e o GMD.`, aba:'lotes'});
+    if(!dietaAtual(l)) A.push({n:'warn', t:`${cap(nomeL(l))} sem dieta definida: não dá para calcular o trato.`, aba:'lotes'});
+  }
+  for(const c of S.currais){
+    const k = capacidadeCurral(c);
+    if(k.ocup>k.max) A.push({n:'danger', t:`<b>${nomeC(c)} superlotado</b>: ${k.ocup} cabeças para ${k.max} de capacidade (limitado por ${k.limitante==='area'?'área':k.limitante}). Transfira animais.`, aba:'capacidade'});
+  }
+  for(const e of estoqueDias()){
+    if(e.consumo>0 && e.dias<7) A.push({n: e.dias<3?'danger':'warn', t:`<b>Estoque de ${esc(e.nome)}</b> dá para ${nf(Math.max(0,e.dias),1)} dia(s). Programe a compra.`, aba:'dietas'});
+  }
+  if(S.clima && S.clima.dias) for(const d of S.clima.dias.filter(x=>x.data>=h).slice(0,2)){
+    const f = faixaITU(d.itu);
+    if(f.n!=='ok') A.push({n:f.n, t:`<b>Calor ${d.data===h?'hoje':'amanhã'}</b>: ITU ${nf(d.itu)} (${f.t}), máxima de ${nf(d.tmax)} °C. Confira bebedouros e concentre o trato nas horas frescas.`, aba:'inicio'});
+  }
+  const idadePreco = dias(S.precos.atualizadoEm, h);
+  if(idadePreco>7) A.push({n:'info', t:`Preços atualizados há ${idadePreco} dias. Atualize quando tiver sinal.`, aba:'mercado'});
+  const ordem = {danger:0,warn:1,info:2,ok:3};
+  return A.sort((a,b)=>ordem[a.n]-ordem[b.n]);
+}
+
+// ====================== Ícones ======================
+const IC = {
+  inicio:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>',
+  trato:'<path d="M2 9h20l-2.5 8.5a2 2 0 0 1-1.9 1.5H6.4a2 2 0 0 1-1.9-1.5z"/><path d="M6 9c1-3 3-4 6-4s5 1 6 4"/><path d="M5 22l1-3M19 22l-1-3"/>',
+  lotes:'<path d="M7 3h10a2 2 0 0 1 2 2v9a7 7 0 0 1-14 0V5a2 2 0 0 1 2-2z"/><circle cx="12" cy="7.5" r="1.6"/><path d="M9 14h6"/>',
+  capacidade:'<path d="M3 6v14M21 6v14M3 9h18M3 15h18"/><path d="M8 9v6M13 9v6M18 9v6"/>',
+  sanidade:'<path d="m18 2 4 4M17 7l-9.5 9.5-3 .5.5-3L14.5 4.5zM14 5l5 5"/><path d="M2 22l3-3"/>',
+  mercado:'<path d="M3 3v18h18"/><path d="m7 15 4-5 3 3 6-7"/><path d="M16 6h4v4"/>',
+  dietas:'<path d="M12 22V10"/><path d="M12 10c-4 0-6-3-6-7 4 0 6 3 6 7zM12 14c4 0 6-3 6-7-4 0-6 3-6 7zM12 18c-3 0-5-2-5-5 3 0 5 2 5 5z"/>',
+  simular:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h2M14 11h2M8 15h2M14 15h2M8 19h8"/>',
+  config:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3h-1M17 17.5v3"/>',
+  brincos:'<path d="M12 2c3.5 0 6 2.5 6 6v7a6 6 0 0 1-12 0V8c0-3.5 2.5-6 6-6z"/><circle cx="12" cy="7" r="1.6"/><path d="M9 13h6M9 16h6"/>',
+  mais:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  danger:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h0"/>',
+  warn:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h0"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h0"/>',
+  ok:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  mais1:'<path d="M12 5v14M5 12h14"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  zap:'<path d="M20.5 3.5A11 11 0 0 0 3.6 17.2L2.5 21.5l4.4-1.1A11 11 0 1 0 20.5 3.5z"/><path d="M8.5 8.5c.5 2.5 2.5 5 5.5 6l1.5-1.5 2 1-.5 2c-4 .5-9-4.5-9-9l2-.5 1 2z"/>',
+  sol:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  seta:'<path d="m9 6 6 6-6 6"/>', volta:'<path d="m15 6-6 6 6 6"/>',
+  vagao:'<rect x="2" y="7" width="15" height="9" rx="1"/><path d="M17 10h3l2 3v3h-5"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+};
+const ico = (k, extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${IC[k]||''}</svg>`;
+const LOGO = `<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#f2c12e"/><circle cx="20" cy="9" r="3" fill="#1d4a36"/><path d="M9 17c3-1 5 0 6 2 1-2 3-3 5-3s4 1 5 3c1-2 3-3 6-2-1 3-3 4-5 4l-1 7c-.4 3-2.6 5-5 5s-4.6-2-5-5l-1-7c-2 0-4-1-5-4z" fill="#1d4a36"/></svg>`;
+const codigoLote = l => esc((l.codigo || String(l.nome).replace(/^lote\s*/i,'').trim().split(/[\s–-]+/)[0] || '?').slice(0,3).toUpperCase());
+
+// Ditado por voz: preenche o campo com o que a pessoa falar (quando o navegador permite).
+function ditar(campoId){
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!R) return toast('Este aparelho não oferece ditado aqui. Use o microfone do teclado.');
+  try{
+    const r = new R(); r.lang='pt-BR'; r.interimResults=false;
+    r.onresult = e => { const el=document.getElementById(campoId); if(el){ el.value = (el.value?el.value+' ':'')+e.results[0][0].transcript; el.dispatchEvent(new Event('input')); } };
+    r.onerror = () => toast('Não consegui ouvir. Tente de novo.');
+    r.start(); toast('Pode falar…');
+  }catch(e){ toast('Ditado indisponível.'); }
+}
+const botaoMic = campoId => `<button type="button" class="s" aria-label="Ditar por voz" onclick="ditar('${campoId}')">${ico('mic')}Falar</button>`;
+// Compartilhar: usa o menu do aparelho; senão abre o WhatsApp.
+function compartilhar(txt){
+  if(navigator.share){ navigator.share({text:txt}).catch(()=>{}); return false; }
+  return true; // deixa o link wa.me abrir
+}
+const linkZap = txt => `<a class="s zap" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener" onclick="return compartilhar(${esc(JSON.stringify(txt))})">${ico('zap')}Enviar no WhatsApp</a>`;
+
+// ====================== Navegação e papéis ======================
+const ABAS = {
+  inicio:{t:'Início', p:['gerente','peao','nutricionista','veterinario']},
+  trato:{t:'Trato', tl:'Trato e cocho', p:['gerente','peao','nutricionista']},
+  lotes:{t:'Lotes', p:['gerente','peao','nutricionista','veterinario']},
+  sanidade:{t:'Sanidade', p:['gerente','veterinario','peao']},
+  brincos:{t:'Brincos', tl:'Brincos e leitores', p:['gerente','peao','nutricionista','veterinario']},
+  mercado:{t:'Mercado', tl:'Mercado e resultado', p:['gerente']},
+  simular:{t:'Simulador', tl:'Simular compra', p:['gerente']},
+  capacidade:{t:'Currais', tl:'Currais e capacidade', p:['gerente','nutricionista']},
+  dietas:{t:'Dietas', tl:'Dietas e estoque', p:['gerente','nutricionista']},
+  config:{t:'Ajustes', p:['gerente','peao','nutricionista','veterinario']},
+};
+const PAPEIS = {gerente:'Gerente', peao:'Peão', nutricionista:'Nutricionista', veterinario:'Veterinário'};
+let aba = 'inicio', editando = null, maisAberto = false, modoTrato = 'leitura', tratoSel = 1, idxLeitura = 0;
+function ir(a){ if(typeof fecharCamera==='function') fecharCamera(); aba=a; editando=null; maisAberto=false; render(); window.scrollTo(0,0); }
+const abasDoPapel = () => Object.keys(ABAS).filter(k=>ABAS[k].p.includes(S.config.papel) && (k!=='brincos' || S.config.usaBrinco));
+function trocarPapel(v){ S.config.papel=v; salvar(); aba = v==='peao' ? 'trato' : 'inicio'; render(); }
+function seletorPapel(){ return `<select class="perfil" aria-label="Perfil de uso" onchange="trocarPapel(this.value)">${Object.entries(PAPEIS).map(([k,v])=>`<option value="${k}"${k===S.config.papel?' selected':''}>${v}</option>`).join('')}</select>`; }
+function sinal(){ return `<span class="sinal ${navigator.onLine?'':'off'}"><i></i>${navigator.onLine?'Com sinal':'Sem sinal'}</span>`; }
+function marca(){ return `<div class="marca">${LOGO}<div><b>Ponteiro</b><small>${esc(S.config.fazenda||'Manejo de confinamento')}</small></div></div>`; }
+function renderNav(){
+  const ks = abasDoPapel();
+  if(!ks.includes(aba)) aba='inicio';
+  document.getElementById('side').innerHTML = `${marca()}<nav>${ks.map(k=>`<button class="${k===aba?'on':''}" onclick="ir('${k}')">${ico(k)}${ABAS[k].tl||ABAS[k].t}</button>`).join('')}</nav>
+    <div class="rodape">${sinal()}<label style="color:inherit;opacity:.8">Perfil${seletorPapel()}</label></div>`;
+  document.getElementById('top').innerHTML = `${marca()}${sinal()}${seletorPapel()}`;
+  const principais = ks.slice(0,4), resto = ks.slice(4);
+  document.getElementById('abas').innerHTML = principais.map(k=>`<button class="${k===aba?'on':''}" onclick="ir('${k}')">${ico(k)}<span>${ABAS[k].t}</span></button>`).join('')
+    + (resto.length?`<button class="${resto.includes(aba)?'on':''}" onclick="maisAberto=true;render()">${ico('mais')}<span>Mais</span></button>`:'');
+  const old = document.getElementById('folha'); if(old) old.remove();
+  if(maisAberto) document.body.insertAdjacentHTML('beforeend', `<div class="folha" id="folha" onclick="if(event.target===this){maisAberto=false;render()}"><div class="card">${resto.map(k=>`<button class="item" onclick="ir('${k}')">${ico(k)}${ABAS[k].tl||ABAS[k].t}</button>`).join('')}</div></div>`);
+}
+function render(){ renderNav(); document.getElementById('app').innerHTML = (V[aba]||V.inicio)(); }
+function rede(){ renderNav(); }
+const titulo = (t, s) => `<div><h1 class="tit">${t}</h1>${s?`<p class="sub">${s}</p>`:''}</div>`;
+const dataExtenso = () => new Date().toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'});
+function regua(l, pv){
+  const alvo = num(l.pesoAbate)||num(S.config.pesoAbate), ini = num(l.pesoEntrada);
+  const p = Math.max(0, Math.min(100, (pv-ini)/Math.max(1,alvo-ini)*100));
+  return `<div class="regua"><div class="trilho"><i style="width:${p}%"></i></div><div class="marcas"><span>${nf(ini)} kg entrada</span><span><b style="color:var(--ink)">${nf(pv)} kg hoje</b></span><span>${nf(alvo)} kg abate</span></div></div>`;
+}
+const segm = (opcoes, atual, fn) => `<div class="segm">${opcoes.map(([k,t])=>`<button class="${k===atual?'on':''}" onclick="${fn}('${k}')">${t}</button>`).join('')}</div>`;
+
+// ====================== Clima ======================
+async function atualizarClima(silencioso){
+  const lat = num(S.config.lat), lon = num(S.config.lon);
+  if(!lat || !lon){ if(!silencioso) toast('Informe a localização da fazenda em Ajustes.'); return; }
+  if(!navigator.onLine){ if(!silencioso) toast('Sem sinal. A previsão atualiza quando voltar.'); return; }
+  try{
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m&forecast_days=3&timezone=auto`);
+    const j = await r.json(); const por = {};
+    j.hourly.time.forEach((t,i)=>{ const d=t.slice(0,10), T=j.hourly.temperature_2m[i], U=j.hourly.relative_humidity_2m[i], v=itu(T,U);
+      if(!por[d]) por[d]={data:d, itu:0, tmax:-99}; por[d].itu=Math.max(por[d].itu,v); por[d].tmax=Math.max(por[d].tmax,T); });
+    S.clima = {atualizadoEm:new Date().toISOString(), dias:Object.values(por)}; salvar(); if(!silencioso) toast('Previsão atualizada'); render();
+  }catch(e){ if(!silencioso) toast('Não foi possível buscar a previsão do tempo.'); }
+}
+function usarLocalizacao(){
+  if(!navigator.geolocation) return toast('Localização indisponível neste aparelho.');
+  navigator.geolocation.getCurrentPosition(p=>{ S.config.lat=p.coords.latitude.toFixed(4); S.config.lon=p.coords.longitude.toFixed(4); salvar(); toast('Localização salva'); render(); atualizarClima(true); }, ()=>toast('Não foi possível obter a localização.'));
+}
+function cardClima(){
+  if(!S.clima || !S.clima.dias) return num(S.config.lat) ? `<div class="card entre"><span class="muted">${ico('sol','style="width:18px;vertical-align:-4px"')} Previsão de calor ainda não carregada.</span><button class="s" onclick="atualizarClima()">Buscar previsão</button></div>` : '';
+  const ds = S.clima.dias.filter(d=>d.data>=hoje()).slice(0,3);
+  return `<div class="card"><div class="entre"><span class="rot">${ico('sol','style="width:16px;vertical-align:-3px"')} Estresse por calor (ITU)</span><button class="s" onclick="atualizarClima()">Atualizar</button></div>
+  <div class="grade g3c" style="margin:10px 0 0">${ds.map(d=>{ const f=faixaITU(d.itu); return `<div><span class="muted">${d.data===hoje()?'Hoje':new Date(d.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short'})}</span><div class="big" style="font-size:26px">${nf(d.itu)}</div><span class="chip ${f.n}">${f.t} · ${nf(d.tmax)} °C</span></div>`; }).join('')}</div></div>`;
+}
+
+// ====================== Telas ======================
+const V = {};
+V.inicio = () => {
+  const ls = lotesAtivos(), papel = S.config.papel;
+  if(!ls.length && !S.currais.length && !S.dietas.length) return `
+    ${titulo('Bem-vindo ao Ponteiro', 'Tudo fica salvo no aparelho e funciona sem internet.')}
+    <div class="card vazio">${LOGO.replace('width="34" height="34"','width="72" height="72"')}
+      <h2 style="margin-top:12px">Comece pelo curral, pela dieta e pelos lotes</h2>
+      <p class="muted" style="max-width:46ch;margin:0 auto 16px">Ou carregue um exemplo com três lotes para ver o trato, o vagão, os indicadores e o resultado de cada lote.</p>
+      <div class="row" style="justify-content:center"><button class="b" onclick="carregarExemplo()">Carregar exemplo</button><button class="s" onclick="ir('capacidade')">Cadastrar curral</button><button class="s" onclick="ir('dietas')">Cadastrar dieta</button></div></div>`;
+  const tot = {cab:0, venda:0, mn:0, custo:0, peso:0, arrProd:0, custoProd:0};
+  for(const l of ls){ const i=indicadores(l), t=tratoLote(l); tot.cab+=i.cab; tot.venda+=i.vendaHoje; tot.mn+=t.mnTotal; tot.custo+=t.custoDia; tot.peso+=i.pv*i.cab; tot.arrProd+=i.arrobasProd; tot.custoProd+=i.custoProd; }
+  const capMax = S.currais.reduce((s,c)=>s+capacidadeCurral(c).max,0);
+  const ocup = capMax ? tot.cab/capMax*100 : 0;
+  const A = alertas().filter(a=>ABAS[a.aba||'inicio'].p.includes(papel));
+  const p = divisao();
+  const entregue = ls.reduce((s,l)=>s+fornDoDia(l.id).reduce((a,f)=>a+num(f.kgReal),0),0);
+  const lidos = ls.filter(l=>S.leituras.some(x=>x.loteId===l.id && x.data===hoje())).length;
+  const kpis = [
+    `<div class="card kpi"><span class="rot">Rebanho</span><span class="v">${nf(tot.cab)} <small class="muted" style="font-size:15px">cab.</small></span><span class="l">peso médio ${tot.cab?nf(tot.peso/tot.cab):0} kg</span></div>`,
+    `<div class="card kpi"><span class="rot">Ocupação</span><span class="v">${capMax?nf(ocup):'–'}%</span><div class="barra ${ocup>100?'alta':''}"><i style="width:${Math.min(100,ocup)}%"></i></div><span class="l">${nf(Math.max(0,capMax-tot.cab))} vagas de ${nf(capMax)}</span></div>`,
+  ];
+  if(papel!=='peao') kpis.push(`<div class="card kpi"><span class="rot">Custo da @ produzida</span><span class="v">${tot.arrProd?brl2(tot.custoProd/tot.arrProd):'–'}</span><span class="l">ração ${brl(tot.custo)}/dia · ${brl2(tot.cab?tot.custo/tot.cab:0)}/cab.</span></div>`);
+  if(papel==='gerente') kpis.push(`<div class="card kpi"><span class="rot">Valor do rebanho</span><span class="v">${brl(tot.venda)}</span><span class="l">boi gordo ${S.config.uf} a ${brl2(precoUF().boiGordo)}/@</span></div>`);
+  else kpis.push(`<div class="card kpi"><span class="rot">Lotes ativos</span><span class="v">${ls.length}</span><span class="l">${S.currais.length} currais</span></div>`);
+  return `${titulo('Bom dia, '+PAPEIS[papel].toLowerCase(), cap(dataExtenso()))}
+  ${ABAS.trato.p.includes(papel)?`<div class="card heroi"><span class="rot">Trato de hoje</span>
+    <div class="big" style="margin-top:6px">${nf(tot.mn)}<small>kg</small></div>
+    <div class="barra-h"><i style="width:${Math.min(100,entregue/Math.max(1,tot.mn)*100)}%"></i></div>
+    <div class="linha"><span>${nf(entregue)} kg entregues</span><span>${p.length} tratos (${p.map(x=>nf(x*100)).join('/')}%)</span><span>cocho lido em ${lidos} de ${ls.length}</span></div>
+    <div class="row" style="margin-top:14px;position:relative;z-index:1"><button class="b" onclick="modoTrato='leitura';ir('trato')">Leitura de cocho</button><button class="b ghost" onclick="modoTrato='trato';ir('trato')">Registrar trato</button></div></div>`:''}
+  <div class="grade g4">${kpis.join('')}</div>
+  ${cardClima()}
+  <h2>${A.length?`Precisa de atenção <span class="muted" style="font-family:var(--f-body);font-size:15px">· ${A.length}</span>`:'Tudo em dia'}</h2>
+  <div class="alertas">${A.length? A.map(a=>`<div class="alerta ${a.n}">${ico(a.n)}<div class="txt">${a.t}</div>${a.aba && a.aba!=='inicio'?`<a href="#" onclick="ir('${a.aba}');return false">Ver</a>`:''}</div>`).join('') : `<div class="alerta ok">${ico('ok')}<div class="txt">Nenhum alerta agora.</div></div>`}</div>
+  <h2>Lotes</h2>
+  <div class="grade g3">${ls.map(l=>{ const pv=pesoAtual(l); return `<div class="card" style="cursor:pointer" onclick="ir('lotes')"><div class="lote-cab"><div class="brinco sm">${codigoLote(l)}</div><div class="nome"><h3>${esc(l.nome)}</h3><span class="muted">${cabecasAtuais(l)} cab. · ${diasCocho(l)} dias de cocho</span></div></div>${regua(l,pv)}</div>`; }).join('')}</div>`;
+};
+
+// ---------- Trato: leitura de cocho (passa curral), registro do trato e ordem do vagão ----------
+function mudarModoTrato(m){ modoTrato=m; render(); }
+V.trato = () => {
+  const ls = lotesRota();
+  if(!ls.length) return `${titulo('Trato e cocho')}<div class="card vazio"><p>Nenhum lote ativo.</p><button class="b" onclick="ir('lotes')">Cadastrar lote</button></div>`;
+  const modos = [['leitura','1 · Cocho'],['vagao','2 · Vagão'],['trato','3 · Entrega']];
+  let corpo = modoTrato==='vagao' ? telaVagao(ls) : modoTrato==='trato' ? telaFornecimento(ls) : telaLeitura(ls);
+  return `${titulo('Trato e cocho', cap(dataExtenso())+' · currais na ordem da rota')}${segm(modos, modoTrato, 'mudarModoTrato')}${corpo}`;
+};
+function telaLeitura(ls){
+  idxLeitura = Math.max(0, Math.min(idxLeitura, ls.length-1));
+  const l = ls[idxLeitura], t = tratoLote(l), c = porId('currais', l.curralId);
+  const ult = S.leituras.filter(x=>x.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1);
+  const lidoHoje = ult[0] && ult[0].data===hoje() ? ult[0] : null;
+  const feitos = ls.filter(x=>S.leituras.some(y=>y.loteId===x.id && y.data===hoje())).length;
+  const hist = ult.slice(0,7).reverse();
+  return `<div class="entre" style="margin:4px 0 10px"><span class="muted">${feitos} de ${ls.length} currais lidos hoje</span><div class="pontos">${ls.map((x,i)=>`<i class="${i===idxLeitura?'on':''} ${S.leituras.some(y=>y.loteId===x.id&&y.data===hoje())?'ok':''}"></i>`).join('')}</div></div>
+  <div class="card">
+    <div class="lote-cab"><div class="brinco">${codigoLote(l)}</div><div class="nome"><span class="rot">${c?esc(c.nome):'sem curral'}</span><h3 style="font-size:20px">${esc(l.nome)}</h3><span class="muted">${t.cab} cab. · ${nf(t.pv)} kg · ${t.dieta?esc(t.dieta.nome):'sem dieta'}</span></div></div>
+    <p class="rot" style="margin:18px 0 8px">Como está o cocho antes do 1º trato?</p>
+    <div class="notas grande">${(S.config.regraCocho||REGRA_COCHO).map(r=>`<button class="${lidoHoje&&num(lidoHoje.nota)===r.nota?'sel':''}" onclick="lerCocho('${l.id}',${r.nota},true)"><b>${r.nota}</b>${esc(r.nome)}<span>${r.ajuste>0?'+':''}${r.ajuste?r.ajuste+'%':'manter'}</span></button>`).join('')}</div>
+    <label style="margin-top:14px">Observação (opcional)<div class="row" style="flex-wrap:nowrap"><input id="obs-cocho" value="${esc(lidoHoje&&lidoHoje.obs||'')}" placeholder="ex.: bebedouro sujo, lama no cocho" onchange="obsCocho('${l.id}',this.value)">${botaoMic('obs-cocho')}</div></label>
+    ${hist.length?`<div style="margin-top:14px"><span class="rot">Últimas leituras</span><div class="hist">${hist.map(x=>`<div><i style="height:${8+num(x.nota)*9}px" class="n${x.nota}"></i><span>${x.data.slice(8)}/${x.data.slice(5,7)}</span></div>`).join('')}</div></div>`:''}
+    <div class="aviso info" style="margin:14px 0 0">Trato de hoje: <b>${nf(t.mnTotal)} kg</b> (ajuste acumulado ${num(l.ajuste)>0?'+':''}${nf(num(l.ajuste))}%).</div>
+  </div>
+  <div class="nav-curral fixo"><button class="s" ${idxLeitura===0?'disabled':''} onclick="idxLeitura--;render()">${ico('volta')}Anterior</button><button class="b" onclick="${idxLeitura<ls.length-1?'idxLeitura++;render()':`mudarModoTrato('vagao')`}">${idxLeitura<ls.length-1?'Próximo curral':'Ir para o vagão'}${ico('seta')}</button></div>`;
+}
+function lerCocho(loteId, nota, avancar){
+  const l = porId('lotes', loteId), aj = regra(nota).ajuste;
+  const anterior = S.leituras.find(x=>x.loteId===loteId && x.data===hoje());
+  if(anterior) l.ajuste = num(l.ajuste) - regra(anterior.nota).ajuste; // trocar a nota do dia não acumula
+  l.ajuste = Math.max(-30, Math.min(30, num(l.ajuste)+aj));
+  const obs = anterior ? anterior.obs : '';
+  S.leituras = S.leituras.filter(x=>!(x.loteId===loteId && x.data===hoje()));
+  S.leituras.push({id:id(), loteId, data:hoje(), nota, obs});
+  salvar(); toast(`Nota ${nota} · trato ${aj>0?'+':''}${aj}%`);
+  if(avancar && idxLeitura < lotesRota().length-1) idxLeitura++;
+  render();
+}
+function obsCocho(loteId, v){ const x = S.leituras.find(y=>y.loteId===loteId && y.data===hoje()); if(x){ x.obs=v; salvar(); } else toast('Escolha a nota primeiro.'); }
+function escolherTrato(k){ tratoSel = num(k); render(); }
+function telaVagao(ls){
+  const n = divisao().length, cap = Math.max(100, num(S.config.capVagao));
+  const grupos = {};
+  for(const l of ls){ const d = dietaAtual(l); if(!d) continue; (grupos[d.id] = grupos[d.id] || {dieta:d, lotes:[]}).lotes.push({l, kg:previstoTrato(l,tratoSel), feito: fornDoDia(l.id).some(f=>f.trato===tratoSel)}); }
+  const blocos = Object.values(grupos).map(g=>{
+    const total = g.lotes.reduce((s,x)=>s+x.kg,0), di = dietaInfo(g.dieta);
+    const nb = Math.max(1, Math.ceil(total/cap));
+    // Distribui os currais em batidas sem passar da capacidade do vagão
+    const batidas = Array.from({length:nb},()=>({lotes:[], kg:0}));
+    let b=0; for(const x of g.lotes){ let resto=x.kg; while(resto>0.5){ const livre = cap - batidas[b].kg; if(livre<=0.5){ b=Math.min(b+1,nb-1); if(batidas[b].kg>=cap){ batidas.push({lotes:[],kg:0}); b=batidas.length-1; } continue; } const q=Math.min(livre,resto); batidas[b].lotes.push({...x, kg:q}); batidas[b].kg+=q; resto-=q; } }
+    return batidas.filter(bt=>bt.kg>0).map((bt,bi,arr)=>{
+      let acum=0;
+      const carga = g.dieta.ingredientes.map(i=>{ const kg = bt.kg*(num(i.inclusao)/100/Math.max(.01,num(i.ms)/100))/Math.max(.0001,di.mnPorMs); acum+=kg; return {nome:i.nome, kg, acum}; });
+      return `<div class="card"><div class="entre"><h3>${esc(g.dieta.nome)}${arr.length>1?` · batida ${bi+1} de ${arr.length}`:''}</h3><span class="chip">${nf(bt.kg)} kg</span></div>
+      <p class="rot" style="margin:14px 0 6px">Ordem de carregamento</p>
+      <div class="tw"><table><tr><th>#</th><th>Ingrediente</th><th class="n">kg</th><th class="n">Balança marca</th></tr>${carga.map((c,i)=>`<tr><td class="num">${i+1}</td><td>${esc(c.nome)}</td><td class="n">${nf(c.kg)}</td><td class="n"><b>${nf(c.acum)}</b></td></tr>`).join('')}</table></div>
+      <p class="rot" style="margin:14px 0 6px">Descarregar na rota</p>
+      <div class="tw"><table><tr><th>Curral</th><th>Lote</th><th class="n">kg</th><th></th></tr>${bt.lotes.map(x=>{ const c=porId('currais',x.l.curralId); return `<tr><td>${c?esc(c.nome):'–'}</td><td><span class="brinco sm" style="display:inline-flex;vertical-align:middle;margin-right:6px">${codigoLote(x.l)}</span>${esc(x.l.nome)}</td><td class="n"><b>${nf(x.kg)}</b></td><td>${x.feito?'<span class="chip ok">entregue</span>':''}</td></tr>`; }).join('')}</table></div></div>`;
+    }).join('');
+  }).join('');
+  return `<div class="entre" style="margin-bottom:10px">${segm(Array.from({length:n},(_, i)=>[String(i+1),`${i+1}º trato`]), String(tratoSel), 'escolherTrato')}<span class="muted">vagão de ${nf(cap)} kg</span></div>
+  ${blocos||'<div class="card muted">Nenhum lote com dieta definida.</div>'}
+  <div class="nav-curral"><button class="s" onclick="mudarModoTrato('leitura')">${ico('volta')}Leitura</button><button class="b" onclick="mudarModoTrato('trato')">Registrar entrega${ico('seta')}</button></div>`;
+}
+function telaFornecimento(ls){
+  const n = divisao().length;
+  let prevTot=0, realTot=0;
+  const linhas = ls.map(l=>{
+    const kg = previstoTrato(l, tratoSel), f = fornDoDia(l.id).find(x=>x.trato===tratoSel), c = porId('currais', l.curralId);
+    const dia = fornDoDia(l.id); prevTot += tratoLote(l).mnTotal; realTot += dia.reduce((s,x)=>s+num(x.kgReal),0);
+    const desvio = f ? (num(f.kgReal)-num(f.kgPrevisto))/Math.max(1,num(f.kgPrevisto))*100 : 0;
+    return `<div class="card forn ${f?'feito':''}">
+      <div class="lote-cab"><div class="brinco sm">${codigoLote(l)}</div><div class="nome"><h3>${c?esc(c.nome):'–'} · ${esc(l.nome)}</h3><span class="muted">previsto <b>${nf(kg)} kg</b>${f?` · entregue ${nf(num(f.kgReal))} kg <span class="chip ${Math.abs(desvio)>5?'warn':'ok'}">${desvio>0?'+':''}${nf(desvio,1)}%</span>`:''}</span></div></div>
+      ${f?`<div class="row" style="margin-top:10px"><button class="s" onclick="desfazerTrato('${f.id}')">Desfazer</button></div>`:`
+      <div class="row" style="margin-top:12px;flex-wrap:nowrap"><input id="kg-${l.id}" inputmode="decimal" placeholder="${nf(kg)}" aria-label="kg entregues" style="flex:1">
+      <button class="b" onclick="registrarTrato('${l.id}',${tratoSel},${kg.toFixed(1)})">${ico('ok')}Entregue</button></div>
+      <p class="muted" style="margin:6px 0 0">Deixe vazio para confirmar o previsto.</p>`}</div>`;
+  }).join('');
+  const dif = prevTot ? (realTot-prevTot)/prevTot*100 : 0;
+  return `<div class="entre" style="margin-bottom:10px">${segm(Array.from({length:n},(_, i)=>[String(i+1),`${i+1}º trato`]), String(tratoSel), 'escolherTrato')}</div>
+  <div class="card"><div class="grade g3c" style="margin:0"><div class="kpi"><span class="rot">Previsto no dia</span><span class="v">${nf(prevTot)} kg</span></div><div class="kpi"><span class="rot">Entregue</span><span class="v">${nf(realTot)} kg</span></div><div class="kpi"><span class="rot">Falta</span><span class="v">${nf(Math.max(0,prevTot-realTot))} kg</span></div></div>
+  <p class="muted" style="margin:10px 0 0">Se um trato sair a mais ou a menos, os próximos são corrigidos sozinhos. Cada entrega dá baixa no estoque.</p></div>
+  ${linhas}
+  ${realTot>0?`<div class="row" style="margin-top:6px">${linkZap(textoTratoDia())}</div>`:''}`;
+}
+function registrarTrato(loteId, k, prev){
+  const l = porId('lotes', loteId), el = document.getElementById('kg-'+loteId);
+  const real = el && el.value.trim() ? num(el.value) : prev;
+  const d = dietaAtual(l), di = dietaInfo(d);
+  S.fornecimentos.push({id:id(), loteId, data:hoje(), trato:k, kgPrevisto:prev, kgReal:real, dietaId:d&&d.id, custoKgMN:di.custoKgMN, msPct:di.msPct, hora:new Date().toTimeString().slice(0,5)});
+  baixarEstoque(d, real);
+  salvar(); toast(`${nf(real)} kg registrados`); render();
+}
+function desfazerTrato(fid){
+  const f = porId('fornecimentos', fid); if(!f) return;
+  baixarEstoque(porId('dietas', f.dietaId), num(f.kgReal), -1);
+  S.fornecimentos = S.fornecimentos.filter(x=>x.id!==fid); salvar(); render();
+}
+function textoTratoDia(){
+  const ls = lotesRota();
+  return `*Trato de ${dbr(hoje())}* – ${S.config.fazenda||'Ponteiro'}\n` + ls.map(l=>{ const c=porId('currais',l.curralId), dia=fornDoDia(l.id), r=dia.reduce((s,x)=>s+num(x.kgReal),0), le=S.leituras.find(x=>x.loteId===l.id&&x.data===hoje());
+    return `• ${c?c.nome:''} ${l.nome}: ${nf(r)} de ${nf(tratoLote(l).mnTotal)} kg${le?` · cocho nota ${le.nota}`:''}`; }).join('\n');
+}
+
+// ---------- Lotes ----------
+V.lotes = () => {
+  const pode = S.config.papel==='gerente';
+  let form = '';
+  const e = editando||{};
+  if(e.tipo==='lote') form = formLote(porId('lotes',e.id)||{});
+  else if(e.tipo==='pesagem') form = formPesagem(porId('lotes',e.id));
+  else if(e.tipo==='ocorr') form = formOcorr(porId('lotes',e.id));
+  else if(e.tipo==='animais') form = painelAnimais(porId('lotes',e.id));
+  else if(e.tipo==='despesa') form = formDespesa(porId('lotes',e.id));
+  else if(e.tipo==='fechar') form = formFechamento(porId('lotes',e.id));
+  else if(e.tipo==='relatorio') form = painelRelatorio(porId('lotes',e.id));
+  const ord = S.lotes.slice().sort((a,b)=>(a.ativo===false)-(b.ativo===false) || ordemRota(a)-ordemRota(b));
+  const cards = ord.map(l=>{
+    const i = indicadores(l), c = porId('currais',l.curralId), d = dietaAtual(l), nAn = S.animais.filter(a=>a.loteId===l.id).length;
+    const btn = (tipo, t) => `<button class="s" onclick="editando={tipo:'${tipo}',id:'${l.id}'};render();scrollTo(0,0)">${t}</button>`;
+    return `<div class="card" style="${l.ativo===false?'opacity:.6':''}">
+      <div class="lote-cab"><div class="brinco">${codigoLote(l)}</div><div class="nome"><h3>${esc(l.nome)}</h3>
+      <div class="chips" style="margin-top:4px"><span class="chip ${l.fase==='Recria'||l.fase==='Cria'?'warn':'ok'}">${esc(l.fase||'Terminação')}</span><span class="chip">${esc(l.categoria||'')}</span><span class="chip">${c?esc(c.nome):'sem curral'}</span><span class="chip ${d?'':'warn'}">${d?esc(d.nome):'sem dieta'}</span>${nAn&&!l.fechamento?`<span class="chip">brincos ${esc(faixaLote(l))}</span>`:''}${l.fechamento?'<span class="chip ok">fechado</span>':l.ativo===false?'<span class="chip">encerrado</span>':''}</div></div></div>
+      ${l.fechamento?`<div class="stats"><div><b>${l.fechamento.cabecas}</b><span>vendidas</span></div><div><b>${nf(l.fechamento.arrobas)}</b><span>arrobas</span></div><div><b>${brl(l.fechamento.receita)}</b><span>receita</span></div><div><b style="color:${l.fechamento.lucro<0?'var(--danger)':'var(--ok)'}">${brl(l.fechamento.lucro)}</b><span>lucro</span></div></div>
+      <div class="acoes"><button class="s" onclick="editando={tipo:'relatorio',id:'${l.id}'};render();scrollTo(0,0)">Ver resultado</button></div></div>`:`
+      <div class="stats"><div><b>${i.cab}</b><span>cabeças</span></div><div><b>${i.dc}</b><span>dias de cocho</span></div><div><b>${nf(i.g,2)}</b><span>GMD kg/dia</span></div><div><b>${i.diasAbate??'–'}</b><span>dias p/ abate</span></div></div>
+      ${regua(l,i.pv)}
+      <div class="stats ind"><div><b>${nf(i.cmsCab,1)}</b><span>CMS kg/cab (${nf(i.cmsPct,2)}% PV)</span></div><div><b>${i.conversao?nf(i.conversao,1):'–'}</b><span>conversão alimentar</span></div><div><b>${i.custoArroba?brl(i.custoArroba):'–'}</b><span>custo da @ produzida</span></div><div><b>${brl2(i.custoCabDia)}</b><span>custo/cab/dia</span></div></div>
+      <div class="acoes">${btn('pesagem','Pesagem')}${btn('ocorr','Ocorrência')}${btn('animais',`Animais${nAn?` (${nAn})`:''}`)}${pode?btn('despesa','Despesa'):''}${btn('relatorio','Relatório')}${pode&&!l.fechamento?btn('fechar','Fechar lote'):''}${pode?btn('lote','Editar'):''}</div></div>`}`;
+  }).join('');
+  const oc = S.ocorrencias.slice().sort((a,b)=>a.data<b.data?1:-1).slice(0,12);
+  return `<div class="entre">${titulo('Lotes', `${lotesAtivos().length} ativos · na ordem da rota`)}${pode && !editando?`<button class="b" onclick="editando={tipo:'lote',id:null};render()">${ico('mais1')}Novo lote</button>`:''}</div>
+  ${form}
+  ${cards||'<div class="card vazio muted">Nenhum lote cadastrado.</div>'}
+  ${oc.length?`<h2>Ocorrências recentes</h2><div class="card tw"><table><tr><th>Data</th><th>Lote</th><th>Tipo</th><th class="n">Cab.</th><th>Descrição</th></tr>
+  ${oc.map(o=>`<tr><td class="num">${dbr(o.data)}</td><td>${esc((porId('lotes',o.loteId)||{}).nome)}</td><td><span class="chip ${o.tipo==='morte'?'danger':o.tipo==='doente'?'warn':''}">${esc(TIPOS_OC[o.tipo])}</span></td><td class="n">${o.cabecas}</td><td>${o.brinco?`<b>${esc(o.brinco)}</b> · `:''}${esc(o.descricao)}</td></tr>`).join('')}</table></div>`:''}`;
+};
+const TIPOS_OC = {doente:'Animal doente', morte:'Morte', saida:'Saída/venda', outro:'Outro'};
+function opcoes(lista, sel, vazio){ return (vazio?`<option value="">${vazio}</option>`:'')+S[lista].map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(x.nome)}</option>`).join(''); }
+const botoesForm = (extra, rot) => `<div class="row" style="margin-top:14px"><button class="b">${rot||'Salvar'}</button><button type="button" class="s" onclick="editando=null;render()">Cancelar</button>${extra||''}</div>`;
+function formLote(l){
+  const pl = (l.plano||[]).concat([{},{},{}]).slice(0,3);
+  return `<form class="card form" onsubmit="salvarLote(event,'${l.id||''}')"><h3>${l.id?'Editar lote':'Novo lote'}</h3><div class="f">
+  <label>Nome do lote<input id="fl-nome" name="nome" required value="${esc(l.nome)}" placeholder="Ex.: Lote D – Nelore"></label>
+  <label>Código do brinco (até 3)<input id="fl-codigo" name="codigo" maxlength="3" value="${esc(l.codigo)}" placeholder="D"></label>
+  <label>Fase<select id="fl-fase" name="fase">${['Cria','Recria','Terminação'].map(x=>`<option${x===(l.fase||'Terminação')?' selected':''}>${x}</option>`).join('')}</select></label>
+  <label>Categoria<select id="fl-cat" name="categoria">${['Boi','Novilho','Garrote','Novilha','Vaca'].map(x=>`<option${x===l.categoria?' selected':''}>${x}</option>`).join('')}</select></label>
+  <label>Curral<select id="fl-curral" name="curralId">${opcoes('currais',l.curralId,'–')}</select></label>
+  <label>Dieta de terminação<select id="fl-dieta" name="dietaId">${opcoes('dietas',l.dietaId,'–')}</select></label>
+  <label>Cabeças na entrada<input id="fl-cab" name="cabecas" type="number" inputmode="numeric" required value="${l.cabecas??''}"></label>
+  <label>Data de entrada<input id="fl-data" name="dataEntrada" type="date" required value="${l.dataEntrada||hoje()}"></label>
+  <label>Peso médio de entrada (kg)<input id="fl-peso" name="pesoEntrada" inputmode="decimal" required value="${l.pesoEntrada??''}"></label>
+  <label>GMD esperado (kg/dia)<input id="fl-gmd" name="gmd" inputmode="decimal" value="${l.gmd??1.5}"></label>
+  <label>Peso de abate (kg)<input id="fl-abate" name="pesoAbate" inputmode="decimal" value="${l.pesoAbate??S.config.pesoAbate}"></label>
+  <label>Custo total de compra (R$)<input id="fl-custo" name="custoCompra" inputmode="decimal" value="${l.custoCompra??''}" placeholder="vazio = estimar pelo mercado"></label>
+  </div>
+  <p class="rot" style="margin:16px 0 8px">Adaptação: dietas antes da terminação</p>
+  ${pl.map((p,i)=>`<div class="f" style="margin-bottom:8px"><label>Etapa ${i+1}<select id="fl-pd${i}" name="pd${i}">${opcoes('dietas',p.dietaId,'–')}</select></label><label>até o dia de cocho<input id="fl-pa${i}" name="pa${i}" type="number" value="${p.ateDia??''}" placeholder="${[5,10,15][i]}"></label></div>`).join('')}
+  ${!l.id?`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);margin-top:12px"><input id="fl-prot" type="checkbox" name="protocolo" checked style="width:auto"> Criar o protocolo sanitário de entrada sugerido</label>`:''}
+  ${botoesForm(l.id?`<button type="button" class="s" onclick="encerrarLote('${l.id}')">${l.ativo===false?'Reativar':'Encerrar sem fechar'}</button><button type="button" class="s d" onclick="excluir('lotes','${l.id}')">Excluir</button>`:'')}</form>`;
+}
+function dadosForm(ev){ ev.preventDefault(); return Object.fromEntries(new FormData(ev.target).entries()); }
+function salvarLote(ev, lid){
+  const d = dadosForm(ev);
+  let l = porId('lotes', lid);
+  const novo = !l;
+  if(novo){ l = {id:id(), ativo:true, ajuste:0}; S.lotes.push(l); }
+  if(!novo && l.curralId !== d.curralId) S.movimentos.push({id:id(), loteId:l.id, data:hoje(), de:l.curralId, para:d.curralId, cabecas:cabecasAtuais(l)});
+  Object.assign(l, {nome:d.nome, codigo:(d.codigo||'').trim(), categoria:d.categoria, fase:d.fase||'Terminação', curralId:d.curralId, dietaId:d.dietaId, cabecas:num(d.cabecas), dataEntrada:d.dataEntrada, pesoEntrada:num(d.pesoEntrada), gmd:num(d.gmd), pesoAbate:num(d.pesoAbate), custoCompra: d.custoCompra?num(d.custoCompra):''});
+  l.plano = [0,1,2].map(i=>({dietaId:d['pd'+i], ateDia:num(d['pa'+i])})).filter(p=>p.dietaId && p.ateDia>0);
+  if(novo && d.protocolo) aplicarProtocolo(l);
+  salvar(); editando=null; toast('Lote salvo'); render();
+}
+function encerrarLote(lid){ const l=porId('lotes',lid); l.ativo = l.ativo===false; salvar(); editando=null; render(); }
+function excluir(lista, i){
+  confirmar('Excluir definitivamente? Isso não pode ser desfeito.', ()=>{
+    S[lista] = S[lista].filter(x=>x.id!==i);
+    if(lista==='lotes') for(const k of ['pesagens','sanidade','ocorrencias','leituras','fornecimentos','despesas','animais','movimentos']) S[k]=S[k].filter(x=>x.loteId!==i);
+    salvar(); editando=null; render();
+  });
+}
+function formPesagem(l){
+  const ps = S.pesagens.filter(p=>p.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1);
+  return `<form class="card form" onsubmit="salvarPesagem(event,'${l.id}')"><h3>Pesagem · ${esc(l.nome)}</h3><div class="f">
+  <label>Data<input id="fp-data" type="date" name="data" value="${hoje()}" required></label>
+  <label>Peso médio (kg)<input id="fp-peso" name="pesoMedio" inputmode="decimal" required placeholder="estimado hoje: ${nf(pesoAtual(l))}"></label></div>
+  ${ps.length?`<p class="muted">Anteriores: ${ps.map(p=>`${dbr(p.data)} · ${nf(num(p.pesoMedio))} kg`).join(' — ')}</p>`:''}${botoesForm()}</form>`;
+}
+function salvarPesagem(ev, lid){ const d=dadosForm(ev); S.pesagens.push({id:id(), loteId:lid, data:d.data, pesoMedio:num(d.pesoMedio)}); salvar(); editando=null; toast('Pesagem registrada'); render(); }
+function formOcorr(l){
+  return `<form class="card form" onsubmit="salvarOcorr(event,'${l.id}')"><h3>Ocorrência · ${esc(l.nome)}</h3>
+  <p class="rot" style="margin:0 0 8px">O que aconteceu?</p>
+  <div class="segm grande" id="oc-tipos">${Object.entries(TIPOS_OC).map(([k,v],i)=>`<label class="opt"><input type="radio" name="tipo" value="${k}" ${i===0?'checked':''}><span>${v}</span></label>`).join('')}</div>
+  <div class="f" style="margin-top:12px">
+  <label>Nº de cabeças<input id="fo-cab" name="cabecas" type="number" value="1" required></label>
+  <label>Brinco (opcional)<input id="fo-brinco" name="brinco" list="brincos-${l.id}" placeholder="ex.: 452"><datalist id="brincos-${l.id}">${S.animais.filter(a=>a.loteId===l.id).map(a=>`<option value="${esc(a.brinco)}">`).join('')}</datalist></label>
+  <label>Data<input id="fo-data" type="date" name="data" value="${hoje()}" required></label></div>
+  <label style="margin-top:12px">Descrição<div class="row" style="flex-wrap:nowrap"><input id="fo-desc" name="descricao" placeholder="sintomas, causa">${botaoMic('fo-desc')}</div></label>${botoesForm()}</form>`;
+}
+function salvarOcorr(ev, lid){
+  const d=dadosForm(ev);
+  S.ocorrencias.push({id:id(), loteId:lid, data:d.data, tipo:d.tipo, cabecas:num(d.cabecas), brinco:(d.brinco||'').trim(), descricao:d.descricao});
+  if(d.brinco){
+    let a = S.animais.find(x=>x.loteId===lid && x.brinco===d.brinco.trim());
+    if(!a && (d.tipo==='doente'||d.tipo==='morte')){ a={id:id(), loteId:lid, brinco:d.brinco.trim(), pesoEntrada:'', status:'ativo', historico:[]}; S.animais.push(a); }
+    if(a){ a.status = d.tipo==='doente'?'enfermaria': d.tipo==='morte'?'morto': d.tipo==='saida'?'vendido':a.status; (a.historico=a.historico||[]).push({data:d.data, txt:TIPOS_OC[d.tipo]+(d.descricao?': '+d.descricao:'')}); }
+  }
+  salvar(); editando=null; toast('Ocorrência registrada'); render();
+}
+// Animais individuais (brinco)
+const STATUS_AN = {ativo:'No lote', enfermaria:'Enfermaria', morto:'Morto', vendido:'Vendido'};
+function painelAnimais(l){
+  const an = S.animais.filter(a=>a.loteId===l.id);
+  return `<div class="card form"><div class="entre"><h3>Animais · ${esc(l.nome)}</h3><button class="s" onclick="editando=null;render()">Fechar</button></div>
+  <p class="muted">Cadastre os brincos (SISBOV/PNIB: 076 + 12 dígitos, ou o número do manejo). Um por linha. Peso e código do QR são opcionais: <code>452;385;076000123450452</code>.</p>
+  <form class="row" onsubmit="salvarFaixa(event,'${l.id}')" style="margin-bottom:10px"><span class="rot">Faixa de brincos</span><input name="de" type="number" placeholder="de 150" style="width:110px" required><input name="ate" type="number" placeholder="até 190" style="width:110px" required><button class="s">Cadastrar faixa</button></form>
+  <form onsubmit="salvarAnimais(event,'${l.id}')"><textarea id="an-lista" name="lista" rows="3" placeholder="452;385&#10;453;392"></textarea><div class="row" style="margin-top:8px"><button class="b">Adicionar</button></div></form>
+  ${an.length?`<div class="tw" style="margin-top:12px"><table><tr><th>Brinco</th><th class="n">Peso entrada</th><th class="n">Último peso</th><th>Situação</th><th>Último registro</th><th></th></tr>${an.map(a=>`<tr><td><b>${esc(a.brinco)}</b></td><td class="n">${a.pesoEntrada?nf(num(a.pesoEntrada))+' kg':'–'}</td><td class="n">${a.pesos&&a.pesos.length?nf(a.pesos[a.pesos.length-1].kg)+' kg':'–'}</td><td><span class="chip ${a.status==='enfermaria'?'warn':a.status==='morto'?'danger':a.status==='vendido'?'':'ok'}">${STATUS_AN[a.status]||a.status}</span></td><td class="muted">${a.historico&&a.historico.length?dbr(a.historico[a.historico.length-1].data)+' · '+esc(a.historico[a.historico.length-1].txt):'–'}</td><td><button class="s d" aria-label="Remover" onclick="excluirAnimal('${a.id}','${l.id}')">×</button></td></tr>`).join('')}</table></div>`:'<p class="muted">Nenhum animal cadastrado individualmente. O lote continua funcionando pela média.</p>'}</div>`;
+}
+function salvarAnimais(ev, lid){
+  const d = dadosForm(ev); let n=0;
+  for(const linha of String(d.lista||'').split(/\n+/)){ const [b,p,q] = linha.split(/[;,\t]/).map(x=>(x||'').trim()); if(!b) continue;
+    if(S.animais.some(a=>a.loteId===lid && a.brinco===b)) continue;
+    S.animais.push({id:id(), loteId:lid, brinco:b, qr:q||'', pesoEntrada:p?num(p):'', status:'ativo', historico:[{data:hoje(), txt:'Entrada no lote'}]}); n++; }
+  salvar(); toast(`${n} animal(is) adicionados`); editando={tipo:'animais', id:lid}; render();
+}
+function salvarFaixa(ev, lid){
+  const d = dadosForm(ev), de = Math.floor(num(d.de)), ate = Math.floor(num(d.ate));
+  if(!(ate>=de) || ate-de>2000){ toast('Faixa inválida'); return; }
+  let n=0; for(let b=de; b<=ate; b++){ if(S.animais.some(a=>a.loteId===lid && a.brinco===String(b))) continue;
+    S.animais.push({id:id(), loteId:lid, brinco:String(b), qr:'', pesoEntrada:'', status:'ativo', historico:[{data:hoje(), txt:'Entrada no lote'}]}); n++; }
+  salvar(); toast(`${n} animais cadastrados (${de} a ${ate})`); editando={tipo:'animais', id:lid}; render();
+}
+function excluirAnimal(aid, lid){ S.animais = S.animais.filter(a=>a.id!==aid); salvar(); editando={tipo:'animais',id:lid}; render(); }
+const TIPOS_DESP = ['Medicamento','Mão de obra','Frete','Combustível','Energia','Juros','Outros'];
+function formDespesa(l){
+  const ds = S.despesas.filter(d=>d.loteId===l.id).sort((a,b)=>a.data<b.data?1:-1);
+  return `<form class="card form" onsubmit="salvarDespesa(event,'${l.id}')"><h3>Despesa · ${esc(l.nome)}</h3><div class="f">
+  <label>Tipo<select id="fd-tipo" name="tipo">${TIPOS_DESP.map(t=>`<option>${t}</option>`).join('')}</select></label>
+  <label>Valor (R$)<input id="fd-valor" name="valor" inputmode="decimal" required></label>
+  <label>Data<input id="fd-data" type="date" name="data" value="${hoje()}"></label>
+  <label>Descrição<input id="fd-desc" name="descricao"></label></div>
+  <p class="muted">Além destas, o app soma ${brl2(num(S.config.outrosCabDia))} por cabeça por dia de custos fixos (Ajustes).</p>
+  ${ds.length?`<div class="tw"><table>${ds.map(d=>`<tr><td class="num">${dbr(d.data)}</td><td>${esc(d.tipo)}</td><td>${esc(d.descricao)}</td><td class="n">${brl2(num(d.valor))}</td></tr>`).join('')}</table></div>`:''}
+  ${botoesForm()}</form>`;
+}
+function salvarDespesa(ev, lid){ const d=dadosForm(ev); S.despesas.push({id:id(), loteId:lid, data:d.data, tipo:d.tipo, valor:num(d.valor), descricao:d.descricao}); salvar(); editando=null; toast('Despesa lançada'); render(); }
+function formFechamento(l){
+  const i = indicadores(l), car = carenciaAte(l), bloq = car && car>hoje();
+  return `<form class="card form" onsubmit="fecharLote(event,'${l.id}')"><h3>Fechar lote · ${esc(l.nome)}</h3>
+  ${bloq?`<div class="aviso danger">Embarque bloqueado: ${esc(l.nome)} está em carência até <b>${dbr(car)}</b>. Só é possível fechar depois dessa data.</div>`:''}
+  <div class="f">
+  <label>Data do embarque<input id="ff-data" type="date" name="data" value="${hoje()}" required></label>
+  <label>Cabeças vendidas<input id="ff-cab" name="cabecas" type="number" value="${i.cab}" required></label>
+  <label>Peso médio de saída (kg)<input id="ff-peso" name="peso" inputmode="decimal" value="${Math.round(i.pv)}" required></label>
+  <label>Rendimento de carcaça real (%)<input id="ff-rend" name="rend" inputmode="decimal" value="${S.config.rendimento}" required></label>
+  <label>Preço recebido (R$/@)<input id="ff-preco" name="preco" inputmode="decimal" value="${precoUF().boiGordo}" required></label>
+  <label>Descontos e frete (R$)<input id="ff-desc" name="descontos" inputmode="decimal" value="0"></label></div>
+  ${botoesForm('', 'Fechar e gerar resultado').replace('<button class="b">', bloq?'<button class="b" disabled>':'<button class="b">')}</form>`;
+}
+function fecharLote(ev, lid){
+  const d = dadosForm(ev), l = porId('lotes', lid), car = carenciaAte(l);
+  if(car && car>d.data) return toast('Lote em carência: embarque bloqueado.');
+  const i = indicadores(l);
+  const arrobas = num(d.peso)*num(d.rend)/100/15*num(d.cabecas);
+  const receita = arrobas*num(d.preco) - num(d.descontos);
+  const custo = i.compra + i.custoAlim + i.outros;
+  l.fechamento = {data:d.data, cabecas:num(d.cabecas), peso:num(d.peso), rend:num(d.rend), preco:num(d.preco), descontos:num(d.descontos), arrobas, receita,
+    compra:i.compra, alimentacao:i.custoAlim, outros:i.outros, custo, lucro:receita-custo, dias:diasCocho(l), gmd:(num(d.peso)-num(l.pesoEntrada))/Math.max(1,dias(l.dataEntrada,d.data)),
+    cms:i.cmsCab, conversao:i.conversao, custoArroba:i.custoArroba};
+  l.ativo = false;
+  S.ocorrencias.push({id:id(), loteId:lid, data:d.data, tipo:'saida', cabecas:num(d.cabecas), descricao:`Venda: ${nf(arrobas)} @ a ${brl2(num(d.preco))}`});
+  S.animais.filter(a=>a.loteId===lid && a.status==='ativo').forEach(a=>a.status='vendido');
+  salvar(); toast('Lote fechado'); editando={tipo:'relatorio', id:lid}; render();
+}
+function textoRelatorio(l){
+  const i = indicadores(l), f = l.fechamento, c = porId('currais', l.curralId);
+  let t = `*${l.nome}* – ${S.config.fazenda||'Ponteiro'}\n${c?c.nome+' · ':''}entrada ${dbr(l.dataEntrada)} · ${f?f.dias:i.dc} dias de cocho\n\n`;
+  if(f){
+    t += `*Resultado do lote*\nVendidas: ${f.cabecas} cab. · ${nf(f.peso)} kg · rend. ${nf(f.rend,1)}%\nArrobas: ${nf(f.arrobas,1)} @ a ${brl2(f.preco)}\nReceita: ${brl(f.receita)}\nCompra: ${brl(f.compra)}\nAlimentação: ${brl(f.alimentacao)}\nOutros custos: ${brl(f.outros)}\n*Lucro: ${brl(f.lucro)}* (${brl(f.lucro/Math.max(1,f.cabecas))}/cab · ${nf(f.lucro/Math.max(1,f.custo)*100,1)}%)\nGMD: ${nf(f.gmd,2)} kg/dia · CMS ${nf(f.cms,1)} kg · conversão ${f.conversao?nf(f.conversao,1):'–'}\nCusto da @ produzida: ${f.custoArroba?brl2(f.custoArroba):'–'}`;
+  } else {
+    t += `*Situação hoje*\n${i.cab} cab. · ${nf(i.pv)} kg (entrada ${nf(num(l.pesoEntrada))} kg)\nGMD ${nf(i.g,2)} kg/dia · CMS ${nf(i.cmsCab,1)} kg/cab (${nf(i.cmsPct,2)}% PV)\nConversão: ${i.conversao?nf(i.conversao,1):'–'} · mortalidade ${nf(i.mortalidade,1)}%\nCusto acumulado: ${brl(i.custoProd)} · custo da @ produzida ${i.custoArroba?brl2(i.custoArroba):'–'}\nValor hoje: ${brl(i.vendaHoje)}\nAbate previsto: ${i.dataAbate?dbr(i.dataAbate):'–'} · margem prevista ${brl(i.margemAlvo)}`;
+  }
+  return t;
+}
+function painelRelatorio(l){
+  const t = textoRelatorio(l);
+  return `<div class="card form"><div class="entre"><h3>${l.fechamento?'Resultado do lote':'Relatório do lote'} · ${esc(l.nome)}</h3><button class="s" onclick="editando=null;render()">Fechar</button></div>
+  <pre class="relatorio">${esc(t).replace(/\*(.+?)\*/g,'<b>$1</b>')}</pre>
+  <div class="row">${linkZap(t)}<button class="s" onclick="copiar(${esc(JSON.stringify(t))})">Copiar texto</button></div></div>`;
+}
+function copiar(t){ try{ navigator.clipboard.writeText(t).then(()=>toast('Texto copiado'),()=>toast('Selecione o texto e copie')); }catch(e){ toast('Selecione o texto e copie'); } }
+
+// ---------- Currais ----------
+V.capacidade = () => {
+  const e = editando && editando.tipo==='curral' ? (porId('currais',editando.id)||{}) : null;
+  const C = S.config;
+  let tm=0, to=0;
+  const cs = S.currais.slice().sort((a,b)=>(num(a.ordem)||999)-(num(b.ordem)||999));
+  const cards = cs.map(c=>{ const k=capacidadeCurral(c); tm+=k.max; to+=k.ocup; const p=k.max?k.ocup/k.max*100:0;
+    const lim = [['Área',k.area,'area'],['Cocho',k.cocho,'cocho'],['Bebedouro',num(c.bebedouro)>0?k.beb:null,'bebedouro']];
+    return `<div class="card"><div class="entre"><h3>${num(c.ordem)?`<span class="muted num">${num(c.ordem)}º · </span>`:''}${esc(c.nome)}</h3><button class="s" onclick="editando={tipo:'curral',id:'${c.id}'};render();scrollTo(0,0)">Editar</button></div>
+    <div class="entre" style="margin:10px 0 6px"><span class="big" style="font-size:30px">${k.ocup}<small>/ ${k.max} cab.</small></span><span class="chip ${k.ocup>k.max?'danger':p>90?'warn':'ok'}">${k.ocup>k.max?'superlotado':p>90?'quase cheio':nf(k.max-k.ocup)+' vagas'}</span></div>
+    <div class="barra ${k.ocup>k.max?'alta':''}"><i style="width:${Math.min(100,p)}%"></i></div>
+    <table style="margin-top:10px"><tr>${lim.map(([n,v,key])=>`<td style="padding:6px 0;border:0"><span class="rot" style="${key===k.limitante?'color:var(--terra)':''}">${n}${key===k.limitante?' · limita':''}</span><div class="num" style="font-weight:600">${v==null?'–':v+' cab.'}</div></td>`).join('')}</tr></table></div>`; }).join('');
+  const est = estoqueDias().filter(x=>x.consumo>0);
+  const diasMin = est.length ? Math.min(...est.map(x=>x.dias)) : null;
+  return `<div class="entre">${titulo('Currais e capacidade', 'A capacidade é o menor valor entre área, cocho e bebedouro. A ordem define a rota do trato.')}${!e?`<button class="b" onclick="editando={tipo:'curral',id:null};render()">${ico('mais1')}Novo curral</button>`:''}</div>
+  <div class="grade g4">
+    <div class="card kpi"><span class="rot">Capacidade máxima</span><span class="v">${nf(tm)}</span><span class="l">cabeças no total</span></div>
+    <div class="card kpi"><span class="rot">Ocupação</span><span class="v">${nf(to)}</span><span class="l">${tm?nf(to/tm*100):0}% da capacidade</span></div>
+    <div class="card kpi"><span class="rot">Vagas</span><span class="v">${nf(Math.max(0,tm-to))}</span><span class="l">cabeças a mais</span></div>
+    <div class="card kpi"><span class="rot">Ração em estoque</span><span class="v">${diasMin==null?'–':isFinite(diasMin)?nf(Math.max(0,diasMin)):'∞'}</span><span class="l">dias (item que acaba primeiro)</span></div>
+  </div>
+  ${e?formCurral(e):''}
+  <div class="grade g3">${cards||'<div class="card vazio muted">Nenhum curral.</div>'}</div>
+  <p class="muted">Parâmetros: ${nf(num(C.m2PorCab))} m² por cabeça · ${nf(num(C.cmCochoPorCab))} cm de cocho por cabeça · ${nf(num(C.cmBebedouroPorCab))} cm de bebedouro por cabeça. Altere em Ajustes.</p>`;
+};
+function formCurral(c){
+  return `<form class="card form" onsubmit="salvarCurral(event,'${c.id||''}')"><h3>${c.id?'Editar curral':'Novo curral'}</h3><div class="f">
+  <label>Nome<input id="fc-nome" name="nome" required value="${esc(c.nome)}"></label>
+  <label>Ordem na rota do trato<input id="fc-ordem" name="ordem" type="number" value="${c.ordem??S.currais.length+1}"></label>
+  <label>Área útil (m²)<input id="fc-area" name="area" inputmode="decimal" required value="${c.area??''}"></label>
+  <label>Comprimento de cocho (m)<input id="fc-cocho" name="cocho" inputmode="decimal" required value="${c.cocho??''}"></label>
+  <label>Bebedouro, perímetro (cm)<input id="fc-beb" name="bebedouro" inputmode="decimal" value="${c.bebedouro??''}" placeholder="opcional"></label></div>
+  ${botoesForm(c.id?`<button type="button" class="s d" onclick="excluir('currais','${c.id}')">Excluir</button>`:'')}</form>`;
+}
+function salvarCurral(ev, cid){ const d=dadosForm(ev); let c=porId('currais',cid); if(!c){c={id:id()}; S.currais.push(c);} Object.assign(c,{nome:d.nome, ordem:num(d.ordem), area:num(d.area), cocho:num(d.cocho), bebedouro:num(d.bebedouro)}); salvar(); editando=null; render(); }
+
+// ---------- Sanidade ----------
+V.sanidade = () => {
+  const h = hoje(), pode = S.config.papel!=='peao';
+  const pend = S.sanidade.filter(s=>!s.feito && (porId('lotes',s.loteId)||{}).ativo!==false).sort((a,b)=>a.data<b.data?-1:1);
+  const feitos = S.sanidade.filter(s=>s.feito).sort((a,b)=>(a.dataFeito||a.data)<(b.dataFeito||b.data)?1:-1).slice(0,20);
+  const carencias = lotesAtivos().map(l=>({l, ate:carenciaAte(l)})).filter(x=>x.ate && x.ate>=h);
+  const atras = pend.filter(s=>s.data<h).length, semana = pend.filter(s=>s.data>=h && dias(h,s.data)<=7).length;
+  const enf = S.animais.filter(a=>a.status==='enfermaria');
+  const mortes = S.ocorrencias.filter(o=>o.tipo==='morte');
+  const causas = {}; mortes.forEach(o=>{ const k=(o.descricao||'sem causa informada').trim().toLowerCase(); causas[k]=(causas[k]||0)+num(o.cabecas); });
+  return `<div class="entre">${titulo('Sanidade', 'Vacinas, tratamentos, enfermaria e carências.')}${pode && !(editando&&editando.tipo==='san')?`<button class="b" onclick="editando={tipo:'san'};render()">${ico('mais1')}Novo manejo</button>`:''}</div>
+  <div class="grade g4">
+    <div class="card kpi"><span class="rot">Atrasados</span><span class="v" style="color:${atras?'var(--danger)':'inherit'}">${atras}</span><span class="l">manejos vencidos</span></div>
+    <div class="card kpi"><span class="rot">Próximos 7 dias</span><span class="v">${semana}</span><span class="l">manejos agendados</span></div>
+    <div class="card kpi"><span class="rot">Enfermaria</span><span class="v" style="color:${enf.length?'var(--warn)':'inherit'}">${enf.length}</span><span class="l">animais em tratamento</span></div>
+    <div class="card kpi"><span class="rot">Em carência</span><span class="v">${carencias.length}</span><span class="l">lotes com embarque bloqueado</span></div>
+  </div>
+  ${pode && editando && editando.tipo==='san' ? formSan() : ''}
+  ${carencias.map(x=>`<div class="alerta info" style="margin-bottom:8px">${ico('info')}<div class="txt"><b>${esc(x.l.nome)}</b> em carência até <b>${dbr(x.ate)}</b>. Embarque bloqueado.</div></div>`).join('')}
+  ${enf.length?`<h2>Enfermaria</h2><div class="card tw"><table><tr><th>Brinco</th><th>Lote</th><th>Histórico</th><th></th></tr>${enf.map(a=>`<tr><td><b>${esc(a.brinco)}</b></td><td>${esc((porId('lotes',a.loteId)||{}).nome)}</td><td class="muted">${(a.historico||[]).slice(-2).map(x=>dbr(x.data)+' · '+esc(x.txt)).join('<br>')}</td>
+    <td><div class="row" style="justify-content:flex-end"><button class="s" onclick="desfecho('${a.id}','tratamento')">Tratamento</button><button class="s" onclick="desfecho('${a.id}','alta')">${ico('ok')}Alta</button><button class="s d" onclick="desfecho('${a.id}','morte')">Morte</button></div></td></tr>`).join('')}</table></div>`:''}
+  <h2>Agenda</h2>
+  <div class="card tw"><table><tr><th>Quando</th><th>Lote</th><th>Manejo</th><th></th></tr>
+  ${pend.map(s=>{const dd=dias(h,s.data), l=porId('lotes',s.loteId)||{}; return `<tr><td class="num"><b>${dbr(s.data)}</b><br><span class="chip ${dd<0?'danger':dd<=num(S.config.diasAviso)?'warn':''}" style="margin-top:4px">${dd<0?(-dd)+' d atrasado':dd===0?'hoje':'em '+dd+' d'}</span></td>
+  <td><div class="row" style="flex-wrap:nowrap"><span class="brinco sm">${l.nome?codigoLote(l):'?'}</span></div></td><td><b>${esc(s.tipo)}</b> · ${esc(s.produto)}${num(s.carencia)?`<br><span class="muted">carência de ${s.carencia} dias</span>`:''}${num(s.custo)?`<br><span class="muted">${brl2(num(s.custo))}</span>`:''}</td>
+  <td><div class="row" style="justify-content:flex-end"><button class="s" onclick="feito('${s.id}')">${ico('ok')}Feito</button>${pode?`<button class="s d" aria-label="Excluir" onclick="excluir('sanidade','${s.id}')">×</button>`:''}</div></td></tr>`;}).join('')||'<tr><td colspan="4" class="muted">Nada pendente.</td></tr>'}</table></div>
+  ${mortes.length?`<h2>Mortes por causa</h2><div class="card tw"><table>${Object.entries(causas).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(cap(k))}</td><td class="n">${v}</td></tr>`).join('')}</table></div>`:''}
+  <h2>Realizados</h2>
+  <div class="card tw"><table><tr><th>Data</th><th>Lote</th><th>Manejo</th></tr>
+  ${feitos.map(s=>`<tr><td class="num">${dbr(s.dataFeito||s.data)}</td><td>${esc((porId('lotes',s.loteId)||{}).nome)}</td><td>${esc(s.tipo)} · ${esc(s.produto)}${num(s.carencia)?` <span class="chip">carência até ${dbr(somaDias(s.dataFeito||s.data,num(s.carencia)))}</span>`:''}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">Nenhum registro.</td></tr>'}</table></div>
+  <p class="muted">O protocolo de entrada é uma sugestão. Doses, produtos e carências seguem a receita do médico-veterinário responsável e a bula.</p>`;
+};
+function desfecho(aid, tipo){
+  const a = porId('animais', aid); if(!a) return;
+  if(tipo==='alta'){ a.status='ativo'; a.historico.push({data:hoje(), txt:'Alta da enfermaria'}); toast('Alta registrada'); }
+  else if(tipo==='morte'){ a.status='morto'; a.historico.push({data:hoje(), txt:'Morte'}); S.ocorrencias.push({id:id(), loteId:a.loteId, data:hoje(), tipo:'morte', cabecas:1, brinco:a.brinco, descricao:'Morte na enfermaria'}); toast('Morte registrada'); }
+  else { editando={tipo:'san', loteId:a.loteId, brinco:a.brinco}; render(); scrollTo(0,0); return; }
+  salvar(); render();
+}
+function formSan(){
+  const e = editando||{};
+  return `<form class="card form" onsubmit="salvarSan(event)"><h3>${e.brinco?`Tratamento · brinco ${esc(e.brinco)}`:'Manejo sanitário'}</h3><div class="f">
+  <label>Lote<select id="fs-lote" name="loteId" required>${lotesAtivos().map(l=>`<option value="${l.id}"${l.id===e.loteId?' selected':''}>${esc(l.nome)}</option>`).join('')}</select></label>
+  <label>Data<input id="fs-data" type="date" name="data" value="${hoje()}" required></label>
+  <label>Tipo<select id="fs-tipo" name="tipo">${['Vacina','Vermífugo','Tratamento','Antibiótico','Exame','Outro'].map(x=>`<option${e.brinco&&x==='Tratamento'?' selected':''}>${x}</option>`).join('')}</select></label>
+  <label>Produto ou descrição<input id="fs-prod" name="produto" required></label>
+  <label>Carência (dias)<input id="fs-car" name="carencia" type="number" value="0"></label>
+  <label>Custo (R$)<input id="fs-custo" name="custo" inputmode="decimal" placeholder="opcional"></label>
+  <label>Repetir em (dias)<input id="fs-rep" name="repetir" type="number" placeholder="opcional, ex.: 21"></label>
+  <label>Situação<select id="fs-sit" name="feito"><option value="">Agendar</option><option value="1"${e.brinco?' selected':''}>Já foi feito</option></select></label></div>
+  <input type="hidden" name="brinco" value="${esc(e.brinco||'')}">${botoesForm()}</form>`;
+}
+function salvarSan(ev){
+  const d=dadosForm(ev);
+  const prod = d.brinco ? `${d.produto} (brinco ${d.brinco})` : d.produto;
+  S.sanidade.push({id:id(), loteId:d.loteId, data:d.data, tipo:d.tipo, produto:prod, carencia:num(d.carencia), custo:num(d.custo), feito:!!d.feito, dataFeito: d.feito?d.data:null});
+  if(num(d.custo)>0) S.despesas.push({id:id(), loteId:d.loteId, data:d.data, tipo:'Medicamento', valor:num(d.custo), descricao:prod});
+  if(num(d.repetir)>0) S.sanidade.push({id:id(), loteId:d.loteId, data:somaDias(d.data,num(d.repetir)), tipo:d.tipo, produto:prod+' – reforço', carencia:num(d.carencia), feito:false});
+  if(d.brinco){ const a = S.animais.find(x=>x.loteId===d.loteId && x.brinco===d.brinco); if(a) a.historico.push({data:d.data, txt:`${d.tipo}: ${d.produto}`}); }
+  salvar(); editando=null; toast('Manejo salvo'); render();
+}
+function feito(sid){ const s=porId('sanidade',sid); s.feito=true; s.dataFeito=hoje(); salvar(); toast('Marcado como feito'); render(); }
+
+// ---------- Mercado ----------
+V.mercado = () => {
+  const p = precoUF(), ls = lotesAtivos();
+  let tv=0, tc=0, tr=0, ta=0, tm=0;
+  const linhas = ls.map(l=>{ const i=indicadores(l); tv+=i.vendaHoje; tc+=i.compra; tr+=i.reposicao; ta+=i.arrobasHoje; tm+=i.margemAlvo;
+    const ponto = isFinite(i.custoProxArroba) && i.custoProxArroba > p.boiGordo;
+    return `<tr><td><div class="row" style="flex-wrap:nowrap"><span class="brinco sm">${codigoLote(l)}</span><div><b>${esc(l.nome)}</b><br><span class="muted">${i.cab} cab. · ${nf(i.pv)} kg</span></div></div></td><td class="n">${nf(i.arrobasHoje)}</td><td class="n">${brl(i.vendaHoje)}</td><td class="n">${i.custoArroba?brl2(i.custoArroba):'–'}</td>
+    <td class="n"><span class="chip ${ponto?'warn':'ok'}">${isFinite(i.custoProxArroba)?brl2(i.custoProxArroba):'–'}</span></td>
+    <td class="n">${i.dataAbate?dbr(i.dataAbate):'–'}</td><td class="n" style="color:${i.margemAlvo<0?'var(--danger)':'var(--ok)'};font-weight:700">${brl(i.margemAlvo)}</td></tr>`; }).join('');
+  const fechados = S.lotes.filter(l=>l.fechamento);
+  const editar = editando && editando.tipo==='precos';
+  const hist = S.precos.historico.filter(h=>h.uf===S.config.uf).slice(-12);
+  const PR = [['Boi gordo',p.boiGordo,'R$/@ carcaça','venda',brl2],['Vaca gorda',p.vacaGorda,'R$/@ carcaça','venda',brl2],['Boi magro',p.boiMagro,'R$/@ vivo (peso ÷ 30)','compra',brl2],['Bezerro',p.bezerro,'R$ por cabeça','compra',brl]];
+  const troca = p.bezerro/Math.max(1,p.boiGordo);
+  return `${titulo('Mercado e resultado', `Preços de ${UFS[S.config.uf]} · atualizados em ${dbr(S.precos.atualizadoEm)}`)}
+  <div class="row" style="margin-bottom:12px"><select id="m-uf" style="width:auto" onchange="S.config.uf=this.value;salvar();render()">${Object.entries(UFS).map(([k,v])=>`<option value="${k}"${k===S.config.uf?' selected':''}>${k} – ${v}</option>`).join('')}</select>
+  <button class="s" onclick="editando={tipo:'precos'};render()">Atualizar preços</button>${S.config.urlPrecos?`<button class="s" onclick="buscarPrecos()">Buscar online</button>`:''}
+  <a class="s" href="https://www.cepea.org.br/br/indicador/boi-gordo.aspx" target="_blank" rel="noopener">Ver CEPEA ↗</a></div>
+  ${editar?formPrecos(p):''}
+  <div class="grade g4">${PR.map(([n,v,u,op,f])=>`<div class="card preco"><div class="entre"><span class="rot">${n}</span><span class="tag-op ${op}">${op}</span></div><div class="v" style="margin:8px 0 4px">${f(v)}</div><div class="u">${u}</div></div>`).join('')}</div>
+  <div class="card entre"><div><span class="rot">Relação de troca</span><div class="big" style="font-size:28px;margin-top:4px">${nf(troca,1)} @</div><span class="muted">de boi gordo para comprar 1 bezerro</span></div><span class="chip ${troca>9.5?'warn':'ok'}">${troca>9.5?'reposição cara':'reposição em linha'}</span></div>
+  ${p.estimado?`<div class="aviso warn">Os preços de ${UFS[S.config.uf]} são estimativas a partir do indicador de SP. Atualize com a cotação da sua praça.</div>`:''}
+  <p class="muted">Fonte: ${esc(S.precos.fonte)}. Sem sinal, o app usa os últimos preços salvos.</p>
+  ${hist.length>=2?`<div class="card"><span class="rot">Boi gordo em ${S.config.uf} · últimas atualizações</span>${grafico(hist)}</div>`:''}
+  <h2>Valor do rebanho</h2>
+  <div class="grade g4">
+    <div class="card kpi"><span class="rot">Vale hoje</span><span class="v">${brl(tv)}</span><span class="l">${nf(ta)} @ a ${brl2(p.boiGordo)}</span></div>
+    <div class="card kpi"><span class="rot">Custaria repor</span><span class="v">${brl(tr)}</span><span class="l">comprando hoje como magro</span></div>
+    <div class="card kpi"><span class="rot">Investido na compra</span><span class="v">${brl(tc)}</span><span class="l">soma dos lotes ativos</span></div>
+    <div class="card kpi"><span class="rot">Margem prevista</span><span class="v" style="color:${tm<0?'var(--danger)':'var(--ok)'}">${brl(tm)}</span><span class="l">vendendo no peso de abate</span></div>
+  </div>
+  <div class="card tw"><table><tr><th>Lote</th><th class="n">@ hoje</th><th class="n">Valor hoje</th><th class="n">Custo @ prod.</th><th class="n">Próxima @ custa</th><th class="n">Abate</th><th class="n">Margem</th></tr>${linhas||'<tr><td colspan="7" class="muted">Nenhum lote ativo.</td></tr>'}</table></div>
+  <p class="muted"><b>Próxima @ custa</b>: custo por cabeça por dia dividido pelas arrobas que o animal ganha por dia. Quando passa do preço da @, manter no cocho reduz o lucro (ponto ótimo de abate). Arrobas = peso vivo × rendimento (${nf(num(S.config.rendimento))}%) ÷ 15.</p>
+  ${fechados.length?`<h2>Lotes fechados</h2><div class="card tw"><table><tr><th>Lote</th><th>Saída</th><th class="n">@</th><th class="n">Receita</th><th class="n">Custo</th><th class="n">Lucro</th><th></th></tr>${fechados.map(l=>{ const f=l.fechamento; return `<tr><td><b>${esc(l.nome)}</b></td><td class="num">${dbr(f.data)}</td><td class="n">${nf(f.arrobas)}</td><td class="n">${brl(f.receita)}</td><td class="n">${brl(f.custo)}</td><td class="n" style="color:${f.lucro<0?'var(--danger)':'var(--ok)'};font-weight:700">${brl(f.lucro)}</td><td><button class="s" onclick="aba='lotes';editando={tipo:'relatorio',id:'${l.id}'};render();scrollTo(0,0)">Ver</button></td></tr>`; }).join('')}</table></div>`:''}`;
+};
+function grafico(h){
+  const W=600,H=140,P=28, vs=h.map(x=>x.boiGordo), mn=Math.min(...vs)*.98, mx=Math.max(...vs)*1.02;
+  const x=i=>P+i*(W-2*P)/Math.max(1,h.length-1), y=v=>H-P-(v-mn)/(mx-mn||1)*(H-2*P);
+  const pts=h.map((d,i)=>`${x(i)},${y(d.boiGordo)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px" role="img" aria-label="Histórico do boi gordo">
+  <polygon points="${x(0)},${H-P} ${pts} ${x(h.length-1)},${H-P}" fill="var(--pasto-soft)"/>
+  <polyline points="${pts}" fill="none" stroke="var(--pasto-2)" stroke-width="2.5"/>
+  ${h.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.boiGordo)}" r="${i===h.length-1?5:3}" fill="${i===h.length-1?'var(--brinco)':'var(--pasto-2)'}"/>`).join('')}
+  <text x="${x(h.length-1)}" y="${y(vs[vs.length-1])-10}" text-anchor="end" font-size="13" font-weight="700" fill="var(--ink)">${brl2(vs[vs.length-1])}</text>
+  <text x="${P}" y="${H-8}" font-size="11" fill="var(--muted)">${dbr(h[0].data)}</text><text x="${W-P}" y="${H-8}" text-anchor="end" font-size="11" fill="var(--muted)">${dbr(h[h.length-1].data)}</text></svg>`;
+}
+function formPrecos(p){
+  return `<form class="card form" onsubmit="salvarPrecos(event)"><h3>Preços de ${UFS[S.config.uf]}</h3><div class="f">
+  <label>Boi gordo (R$/@)<input id="fpr-bg" name="boiGordo" inputmode="decimal" value="${p.boiGordo}"></label>
+  <label>Vaca gorda (R$/@)<input id="fpr-vg" name="vacaGorda" inputmode="decimal" value="${p.vacaGorda}"></label>
+  <label>Boi magro (R$/@)<input id="fpr-bm" name="boiMagro" inputmode="decimal" value="${p.boiMagro}"></label>
+  <label>Bezerro (R$/cabeça)<input id="fpr-bz" name="bezerro" inputmode="decimal" value="${p.bezerro}"></label>
+  <label>Fonte<input id="fpr-f" name="fonte" value="Cotação informada pelo usuário"></label></div>${botoesForm()}</form>`;
+}
+function salvarPrecos(ev){
+  const d=dadosForm(ev), uf=S.config.uf;
+  S.precos.porUF[uf] = {boiGordo:num(d.boiGordo), vacaGorda:num(d.vacaGorda), boiMagro:num(d.boiMagro), bezerro:num(d.bezerro), estimado:false};
+  S.precos.atualizadoEm = hoje(); S.precos.fonte = d.fonte;
+  S.precos.historico.push({data:hoje(), uf, boiGordo:num(d.boiGordo)});
+  salvar(); editando=null; toast('Preços salvos'); render();
+}
+async function buscarPrecos(){
+  // Espera um JSON { "data":"AAAA-MM-DD", "fonte":"...", "porUF": { "SP": {boiGordo, vacaGorda, boiMagro, bezerro}, ... } }
+  if(!navigator.onLine) return toast('Sem sinal. Usando os últimos preços salvos.');
+  try{
+    const r = await fetch(S.config.urlPrecos, {cache:'no-store'}); const j = await r.json();
+    for(const uf in j.porUF){ S.precos.porUF[uf] = Object.assign({}, S.precos.porUF[uf], j.porUF[uf], {estimado:false}); S.precos.historico.push({data:j.data||hoje(), uf, boiGordo:j.porUF[uf].boiGordo}); }
+    S.precos.atualizadoEm = j.data||hoje(); S.precos.fonte = j.fonte||S.config.urlPrecos;
+    salvar(); toast('Preços atualizados'); render();
+  }catch(e){ toast('Não foi possível buscar os preços. Confira o endereço em Ajustes.'); }
+}
+
+// ---------- Simulador de compra ----------
+let SIM = null;
+function simPadrao(){
+  const p = precoUF(), ls = lotesAtivos();
+  const custoCab = ls.length ? ls.reduce((s,l)=>s+tratoLote(l).custoCab,0)/ls.length : 14;
+  return {cab:100, peso:380, precoCompra:p.boiMagro, gmd:1.5, pesoAbate:num(S.config.pesoAbate), racao:Math.round(custoCab*100)/100, outros:num(S.config.outrosCabDia), precoVenda:p.boiGordo, rend:num(S.config.rendimento)};
+}
+function calcSim(s){
+  const dias = Math.max(0, Math.ceil((s.pesoAbate-s.peso)/Math.max(.1,s.gmd)));
+  const compraCab = s.peso/30*s.precoCompra;
+  const arrobasSaida = s.pesoAbate*s.rend/100/15;
+  const vendaCab = arrobasSaida*s.precoVenda;
+  const custoCocho = (s.racao+s.outros)*dias;
+  const lucroCab = vendaCab - compraCab - custoCocho;
+  const arrobasProd = arrobasSaida - s.peso*s.rend/100/15;
+  const equilibrio = (compraCab+custoCocho)/Math.max(.1,arrobasSaida);
+  return {dias, compraCab, vendaCab, custoCocho, lucroCab, lucroTotal:lucroCab*s.cab, margem: lucroCab/Math.max(1,compraCab+custoCocho)*100, equilibrio, custoArrobaProd: custoCocho/Math.max(.1,arrobasProd), saida: somaDias(hoje(),dias)};
+}
+V.simular = () => {
+  if(!SIM) SIM = simPadrao();
+  const s = SIM, r = calcSim(s);
+  const campo = (k,rot) => `<label>${rot}<input id="sim-${k}" inputmode="decimal" value="${s[k]}" oninput="SIM.${k}=num(this.value);atualizarSim()"></label>`;
+  return `${titulo('Simular compra', 'Vale a pena confinar este lote agora? Mude os números e veja o resultado na hora.')}
+  <div class="card"><div class="f" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    ${campo('cab','Cabeças')}${campo('peso','Peso de compra (kg)')}${campo('precoCompra','Preço de compra (R$/@ vivo)')}${campo('gmd','GMD esperado (kg/dia)')}
+    ${campo('pesoAbate','Peso de abate (kg)')}${campo('rend','Rendimento de carcaça (%)')}${campo('racao','Ração (R$/cab/dia)')}${campo('outros','Outros custos (R$/cab/dia)')}${campo('precoVenda','Preço de venda (R$/@)')}
+  </div>
+  <div id="sim-res">${resSim(r,s)}</div>
+  <div class="row" style="margin-top:12px"><button class="s" onclick="SIM=simPadrao();render()">Voltar aos números da fazenda</button></div></div>
+  <p class="muted">Ração por cabeça começa pela média dos seus lotes de hoje e "outros custos" pelo valor de Ajustes. Preço de equilíbrio é o preço de venda que zera o lucro.</p>`;
+};
+function resSim(r,s){
+  const bom = r.lucroCab>=0;
+  return `<div class="resultado">
+    <div class="kpi"><span class="rot">Lucro por cabeça</span><span class="v" style="color:${bom?'var(--ok)':'var(--danger)'}">${brl(r.lucroCab)}</span><span class="l">margem de ${nf(r.margem,1)}%</span></div>
+    <div class="kpi"><span class="rot">Lucro do lote</span><span class="v" style="color:${bom?'var(--ok)':'var(--danger)'}">${brl(r.lucroTotal)}</span><span class="l">${nf(s.cab)} cabeças</span></div>
+    <div class="kpi"><span class="rot">Dias de cocho</span><span class="v">${r.dias}</span><span class="l">saída em ${dbr(r.saida)}</span></div>
+    <div class="kpi"><span class="rot">Preço de equilíbrio</span><span class="v">${brl2(r.equilibrio)}</span><span class="l">por @ (hoje: ${brl2(s.precoVenda)})</span></div>
+  </div>
+  <div class="tw" style="margin-top:12px"><table>
+    <tr><td>Compra por cabeça</td><td class="n">${brl(r.compraCab)}</td></tr>
+    <tr><td>Custo no cocho por cabeça (${r.dias} dias)</td><td class="n">${brl(r.custoCocho)}</td></tr>
+    <tr><td>Venda por cabeça</td><td class="n">${brl(r.vendaCab)}</td></tr>
+    <tr><td>Custo da arroba produzida (aprox.)</td><td class="n">${brl2(r.custoArrobaProd)}</td></tr></table></div>`;
+}
+function atualizarSim(){ const el=document.getElementById('sim-res'); if(el) el.innerHTML = resSim(calcSim(SIM), SIM); }
+
+// ---------- Dietas e estoque ----------
+const CORES = ['var(--pasto-2)','var(--brinco)','var(--terra)','var(--info)','var(--muted)','var(--ok)'];
+V.dietas = () => {
+  const e = editando && editando.tipo==='dieta' ? (porId('dietas',editando.id)||{ingredientes:[]}) : null;
+  const est = estoqueDias();
+  return `<div class="entre">${titulo('Dietas e estoque', 'Inclusão de cada ingrediente em % da matéria seca. A ordem dos ingredientes é a ordem de carregamento do vagão.')}${!e?`<button class="b" onclick="editando={tipo:'dieta',id:null};render()">${ico('mais1')}Nova dieta</button>`:''}</div>
+  ${e?formDieta(e):''}
+  ${editando && editando.tipo==='compra' ? formCompra() : ''}
+  <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))">
+  ${S.dietas.map(d=>{ const di=dietaInfo(d); return `<div class="card"><div class="entre"><h3>${esc(d.nome)}</h3><button class="s" onclick="editando={tipo:'dieta',id:'${d.id}'};render();scrollTo(0,0)">Editar</button></div>
+  ${Math.abs(di.somaIncl-100)>0.5?`<div class="aviso warn" style="margin-top:10px">A soma das inclusões é ${nf(di.somaIncl,1)}%. Deveria ser 100%.</div>`:''}
+  <div style="display:flex;height:14px;border-radius:99px;overflow:hidden;margin:12px 0 8px;border:1px solid var(--line)">${d.ingredientes.map((i,k)=>`<i title="${esc(i.nome)}" style="width:${num(i.inclusao)}%;background:${CORES[k%6]}"></i>`).join('')}</div>
+  <div class="tw"><table><tr><th>Ingrediente</th><th class="n">% MS</th><th class="n">MS</th><th class="n">R$/kg</th></tr>
+  ${d.ingredientes.map((i,k)=>`<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:${CORES[k%6]}"></span>${esc(i.nome)}</td><td class="n">${nf(num(i.inclusao),1)}%</td><td class="n">${nf(num(i.ms))}%</td><td class="n">${brl2(num(i.custo))}</td></tr>`).join('')}</table></div>
+  <div class="chips" style="margin-top:10px"><span class="chip">MS da dieta ${nf(di.msPct,1)}%</span><span class="chip">${brl2(di.custoKgMS)}/kg MS</span><span class="chip">${brl2(di.custoKgMN)}/kg MN</span></div></div>`;}).join('')}</div>
+  <div class="entre"><h2>Estoque</h2>${!(editando&&editando.tipo==='compra')?`<button class="s" onclick="editando={tipo:'compra'};render()">${ico('mais1')}Entrada de compra</button>`:''}</div>
+  ${est.length?`<div class="card tw"><table><tr><th>Ingrediente</th><th class="n">Estoque (kg)</th><th class="n">Consumo/dia</th><th class="n">Dura</th></tr>
+  ${est.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${nf(x.estoque)}</td><td class="n">${nf(x.consumo)}</td><td class="n"><span class="chip ${x.consumo>0&&x.dias<3?'danger':x.consumo>0&&x.dias<7?'warn':''}">${isFinite(x.dias)?nf(Math.max(0,x.dias),1)+' dias':'–'}</span></td></tr>`).join('')}</table></div>
+  <p class="muted">Cada trato registrado dá baixa no estoque automaticamente.</p>`:'<div class="card muted">Cadastre uma dieta para controlar o estoque.</div>'}
+  ${S.entradas.length?`<h2>Últimas compras</h2><div class="card tw"><table><tr><th>Data</th><th>Ingrediente</th><th class="n">kg</th><th class="n">R$/kg</th></tr>${S.entradas.slice(-10).reverse().map(x=>`<tr><td class="num">${dbr(x.data)}</td><td>${esc(x.nome)}</td><td class="n">${nf(x.kg)}</td><td class="n">${brl2(x.preco)}</td></tr>`).join('')}</table></div>`:''}`;
+};
+function formCompra(){
+  const nomes = Object.values(S.estoque).map(e=>e.nome);
+  return `<form class="card form" onsubmit="salvarCompra(event)"><h3>Entrada de compra</h3><div class="f">
+  <label>Ingrediente<select id="fcp-ing" name="nome">${nomes.map(n=>`<option>${esc(n)}</option>`).join('')}</select></label>
+  <label>Quantidade (kg)<input id="fcp-kg" name="kg" inputmode="decimal" required></label>
+  <label>Preço (R$/kg)<input id="fcp-preco" name="preco" inputmode="decimal" placeholder="atualiza o custo nas dietas"></label>
+  <label>Data<input id="fcp-data" type="date" name="data" value="${hoje()}"></label></div>${botoesForm()}</form>`;
+}
+function salvarCompra(ev){
+  const d = dadosForm(ev), k = chaveIngr(d.nome), e = S.estoque[k] || (S.estoque[k]={nome:d.nome, kg:0});
+  const precoAnt = (S.dietas.flatMap(x=>x.ingredientes).find(i=>chaveIngr(i.nome)===k)||{}).custo;
+  if(num(d.preco)>0){
+    // custo médio ponderado entre o que sobrou e o que chegou
+    const medio = (Math.max(0,num(e.kg))*num(precoAnt) + num(d.kg)*num(d.preco)) / Math.max(1, Math.max(0,num(e.kg))+num(d.kg));
+    for(const x of S.dietas) for(const i of x.ingredientes) if(chaveIngr(i.nome)===k) i.custo = Math.round(medio*1000)/1000;
+  }
+  e.kg = num(e.kg) + num(d.kg);
+  S.entradas.push({id:id(), data:d.data, nome:d.nome, kg:num(d.kg), preco:num(d.preco)});
+  salvar(); editando=null; toast('Entrada registrada'); render();
+}
+function linhaIngr(i={}){
+  const k = chaveIngr(i.nome), est = S.estoque[k] ? num(S.estoque[k].kg) : '';
+  return `<div class="f ingr" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--line)">
+  <label>Ingrediente<input name="nome" value="${esc(i.nome)}"></label><label>% na MS<input name="inclusao" inputmode="decimal" value="${i.inclusao??''}"></label>
+  <label>MS do ingrediente (%)<input name="ms" inputmode="decimal" value="${i.ms??''}"></label><label>Custo (R$/kg)<input name="custo" inputmode="decimal" value="${i.custo??''}"></label>
+  <label>Estoque atual (kg)<input name="estoque" inputmode="decimal" value="${est===''?'':Math.round(est)}"></label></div>`;
+}
+function formDieta(d){
+  return `<form class="card form" id="fd" onsubmit="salvarDieta(event,'${d.id||''}')"><h3>${d.id?'Editar dieta':'Nova dieta'}</h3>
+  <label style="margin-bottom:12px">Nome<input id="fd-nome" name="dnome" required value="${esc(d.nome)}"></label>
+  <div id="ingrs">${(d.ingredientes.length?d.ingredientes:[{},{},{}]).map(linhaIngr).join('')}</div>
+  <button type="button" class="s" onclick="document.getElementById('ingrs').insertAdjacentHTML('beforeend',linhaIngr())">${ico('mais1')}Ingrediente</button>
+  ${botoesForm(d.id?`<button type="button" class="s d" onclick="excluir('dietas','${d.id}')">Excluir</button>`:'')}</form>`;
+}
+function salvarDieta(ev, did){
+  ev.preventDefault();
+  const linhas = [...ev.target.querySelectorAll('.ingr')].map(b=>{ const g=n=>b.querySelector(`[name=${n}]`).value; return {nome:g('nome').trim(), inclusao:num(g('inclusao')), ms:num(g('ms')), custo:num(g('custo')), estoque:g('estoque')}; }).filter(i=>i.nome);
+  for(const i of linhas){ const k=chaveIngr(i.nome); if(!S.estoque[k]) S.estoque[k]={nome:i.nome, kg:0}; if(i.estoque!=='') S.estoque[k].kg = num(i.estoque); delete i.estoque; }
+  let d = porId('dietas',did); if(!d){ d={id:id()}; S.dietas.push(d); }
+  d.nome = ev.target.dnome.value; d.ingredientes = linhas;
+  salvar(); editando=null; toast('Dieta salva'); render();
+}
+
+// ---------- Ajustes ----------
+V.config = () => {
+  const C = S.config, g = C.papel==='gerente'||C.papel==='nutricionista';
+  const campo = (k,rot,t) => `<label>${rot}<input id="cfg-${k}" name="${k}" ${t||'inputmode="decimal"'} value="${esc(C[k])}"></label>`;
+  return `${titulo('Ajustes')}
+  ${g?`<form class="card" onsubmit="salvarConfig(event)"><h3 style="margin-bottom:12px">Fazenda e trato</h3><div class="f">
+  ${campo('fazenda','Nome da fazenda','')}
+  ${campo('nTratos','Tratos por dia','type="number"')}${campo('divisaoTratos','% de cada trato','placeholder="30,20,25,25"')}${campo('capVagao','Capacidade do vagão (kg)')}
+  ${campo('msPctPV','Consumo de MS (% do peso vivo)')}${campo('outrosCabDia','Outros custos (R$/cab/dia)')}
+  ${campo('m2PorCab','Área por cabeça (m²)')}${campo('cmCochoPorCab','Cocho por cabeça (cm)')}${campo('cmBebedouroPorCab','Bebedouro por cabeça (cm)')}
+  ${campo('rendimento','Rendimento de carcaça (%)')}${campo('pesoAbate','Peso de abate padrão (kg)')}${campo('diasAviso','Avisar manejos com (dias)','type="number"')}
+  ${campo('lat','Latitude da fazenda')}${campo('lon','Longitude da fazenda')}
+  ${campo('urlPrecos','Endereço de preços online (opcional)','placeholder="https://..."')}
+  </div>
+  <div class="row" style="margin-top:10px"><button type="button" class="s" onclick="usarLocalizacao()">Usar a localização deste aparelho</button></div>
+  <label class="row" style="margin-top:14px;flex-wrap:nowrap;gap:10px;align-items:flex-start"><input type="checkbox" id="cfg-brinco" name="usaBrinco" value="1" ${C.usaBrinco?'checked':''} style="width:22px;height:22px;flex:none;margin-top:2px"><span><b>Uso brinco individual</b><br><span class="muted">Mostra a aba Brincos e leitores: consulta por número, QR ou bastão RFID e importação das leituras da câmera ou da balança.</span></span></label>
+  <p class="rot" style="margin:18px 0 8px">Regra da leitura de cocho (nutricionista)</p>
+  <div class="f">${(C.regraCocho||REGRA_COCHO).map(r=>`<label>Nota ${r.nota}<div class="row" style="flex-wrap:nowrap"><input name="rn${r.nota}" value="${esc(r.nome)}" aria-label="Nome da nota ${r.nota}"><input name="ra${r.nota}" inputmode="decimal" value="${r.ajuste}" style="width:80px" aria-label="Ajuste % da nota ${r.nota}"></div></label>`).join('')}</div>
+  <div class="row" style="margin-top:14px"><button class="b">Salvar</button></div>
+  <p class="muted">Referências: consumo de 2,0 a 2,5% do PV em MS; 10 a 15 m² por cabeça; 30 a 50 cm de cocho por cabeça; 3 a 5 cm de bebedouro por cabeça. A previsão do tempo vem do Open-Meteo e precisa de sinal.</p></form>`:''}
+  <div class="card"><h3>Dados e cópia de segurança</h3>
+  <p class="muted">Tudo fica salvo neste aparelho e funciona sem sinal. Para passar os dados para outro celular ou computador, exporte a cópia e importe no outro aparelho. Última alteração: ${S.modificadoEm?new Date(S.modificadoEm).toLocaleString('pt-BR'):'–'}.</p>
+  <div class="row"><button class="b" onclick="exportar()">Exportar cópia</button><label class="s" style="cursor:pointer">Importar cópia<input id="cfg-imp" type="file" accept=".json,application/json" style="display:none" onchange="importar(this.files[0])"></label>
+  <button class="s d" onclick="confirmar('Apagar todos os dados deste aparelho?',()=>{S=estadoInicial();salvar();ir('inicio')})">Apagar tudo</button></div></div>
+  <div class="card"><h3>Instalar no celular</h3><p class="muted" style="margin-bottom:0">Android (Chrome): menu ⋮ e depois “Instalar app”. iPhone (Safari): Compartilhar e depois “Adicionar à Tela de Início”. Depois de aberto uma vez com sinal, o app abre sem internet.</p></div>`;
+};
+function salvarConfig(ev){
+  const d=dadosForm(ev);
+  const texto = ['urlPrecos','fazenda','divisaoTratos','lat','lon'];
+  for(const k in d){ if(/^r[na]\d$/.test(k) || k==='usaBrinco') continue; S.config[k] = texto.includes(k)?String(d[k]).trim():num(d[k]); }
+  S.config.usaBrinco = !!d.usaBrinco;
+  S.config.regraCocho = (S.config.regraCocho||REGRA_COCHO).map(r=>({nota:r.nota, nome:d['rn'+r.nota]||r.nome, ajuste:num(d['ra'+r.nota])}));
+  salvar(); toast('Ajustes salvos'); render();
+  if(S.config.lat && S.config.lon) atualizarClima(true);
+}
+function exportar(){
+  const b = new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `ponteiro-copia-${hoje()}.json`; a.click();
+}
+function importar(f){
+  if(!f) return; const r = new FileReader();
+  r.onload = () => { try{ const j=JSON.parse(r.result); if(!j.lotes||!j.config) throw 0; confirmar('Substituir os dados deste aparelho pela cópia?', ()=>{ S=j; normalizar(); salvar(); toast('Cópia importada'); ir('inicio'); }); }catch(e){ toast('Arquivo inválido'); } };
+  r.readAsText(f);
+}
+
+// ====================== Brincos, QR e leitores ======================
+// Opcional: só aparece útil para quem identifica os animais por brinco.
+const normBrinco = b => String(b||'').trim().replace(/\s+/g,'').toUpperCase();
+function acharAnimal(cod){
+  const k = normBrinco(cod); if(!k) return null;
+  const vivos = S.animais.filter(a=>a.status!=='morto' && a.status!=='vendido');
+  return vivos.find(a=>normBrinco(a.brinco)===k || normBrinco(a.qr)===k)
+    // SISBOV/PNIB: o QR costuma trazer os 15 dígitos e o manejo usa só o final.
+    || (k.length>6 ? vivos.find(a=>normBrinco(a.brinco).length>=3 && k.endsWith(normBrinco(a.brinco))) : null)
+    || S.animais.find(a=>normBrinco(a.brinco)===k || normBrinco(a.qr)===k) || null;
+}
+const ultimoPeso = a => (a.pesos&&a.pesos.length) ? a.pesos[a.pesos.length-1] : (a.pesoEntrada?{data:null,kg:num(a.pesoEntrada)}:null);
+// Junta brincos numéricos em faixas: 150, 151, 152, 160 -> "150 a 152, 160"
+function faixas(brincos){
+  const ns = [...new Set(brincos.map(b=>String(b).trim()).filter(b=>/^\d+$/.test(b)).map(Number))].sort((a,b)=>a-b);
+  const out = []; let ini = null, ant = null;
+  for(const n of ns){ if(ini===null){ini=ant=n; continue;} if(n===ant+1){ant=n; continue;} out.push(ini===ant?`${ini}`:`${ini} a ${ant}`); ini=ant=n; }
+  if(ini!==null) out.push(ini===ant?`${ini}`:`${ini} a ${ant}`);
+  const outros = brincos.filter(b=>!/^\d+$/.test(String(b).trim())).length;
+  return out.join(', ') + (outros?`${out.length?' + ':''}${outros} com outro formato`:'');
+}
+const faixaLote = l => faixas(S.animais.filter(a=>a.loteId===l.id && a.status!=='morto' && a.status!=='vendido').map(a=>a.brinco));
+
+function moverAnimal(a, loteDestId, data, origem){
+  if(!loteDestId || a.loteId===loteDestId) return false;
+  const de = porId('lotes', a.loteId), para = porId('lotes', loteDestId); if(!para) return false;
+  if(de && a.status!=='morto' && a.status!=='vendido') de.cabecas = Math.max(0, num(de.cabecas)-1);
+  para.cabecas = num(para.cabecas)+1;
+  S.movimentos.push({id:id(), loteId:para.id, animalId:a.id, data, de:de?de.curralId:'', para:para.curralId, cabecas:1, brinco:a.brinco});
+  (a.historico=a.historico||[]).push({data, txt:`Mudou para ${para.nome}${origem?` (${origem})`:''}`});
+  a.loteId = para.id; return true;
+}
+function pesarAnimal(a, kg, data, origem){
+  if(!(kg>0)) return;
+  (a.pesos=a.pesos||[]).push({data, kg, origem:origem||''});
+  a.pesos.sort((x,y)=>x.data<y.data?-1:1);
+  (a.historico=a.historico||[]).push({data, txt:`Peso ${nf(kg)} kg${origem?` (${origem})`:''}`});
+}
+
+// --- Tela ---
+let lido = null, camAtiva = null, importPrevia = null;
+V.brincos = () => {
+  const a = lido ? porId('animais', lido) : null;
+  const ls = lotesAtivos();
+  const porCurral = S.currais.slice().sort((x,y)=>num(x.ordem)-num(y.ordem)).map(c=>{
+    const lc = ls.filter(l=>l.curralId===c.id).map(l=>({l, f:faixaLote(l), n:S.animais.filter(x=>x.loteId===l.id && x.status!=='morto' && x.status!=='vendido').length}));
+    return {c, lc};
+  }).filter(x=>x.lc.length);
+  return `${titulo('Brincos e leitores','Opcional. Use se a fazenda identifica os animais por brinco, QR, bastão RFID ou câmera.')}
+  <div class="card form"><h3>Ler brinco</h3>
+    <p class="muted">Aponte a câmera para o QR do brinco, ou digite o número. Bastão leitor RFID ligado por Bluetooth também funciona: ele escreve no campo sozinho.</p>
+    <form class="row" style="flex-wrap:nowrap" onsubmit="event.preventDefault();lerBrinco(this.cod.value)">
+      <input id="br-cod" name="cod" placeholder="nº do brinco ou código" autocomplete="off" enterkeyhint="search" style="flex:1">
+      <button class="b">Buscar</button></form>
+    <div class="row" style="margin-top:10px"><button type="button" class="s" onclick="abrirCamera()">${ico('qr')}Ler QR com a câmera</button></div>
+    <div id="cam" style="margin-top:10px"></div>
+  </div>
+  ${a?cartaoAnimal(a):''}
+  <div class="card form"><h3>Importar leituras de câmera ou balança</h3>
+    <p class="muted">Se a fazenda tem câmera com IA ou balança eletrônica, exporte as leituras em planilha (CSV) e traga aqui. Uma linha por animal: <code>brinco; peso; data; local</code>. O local pode ser o nome do curral (o animal muda de curral) ou "embarque". A ordem das colunas pode ser outra se a planilha tiver cabeçalho.</p>
+    <div class="row"><label class="s" style="cursor:pointer">Escolher arquivo<input type="file" accept=".csv,.txt,.json,text/csv,text/plain,application/json" hidden onchange="lerArquivoLeituras(this.files[0])"></label></div>
+    <form style="margin-top:10px" onsubmit="event.preventDefault();previaLeituras(this.txt.value)"><textarea id="br-txt" name="txt" rows="3" placeholder="brinco;peso;data;local&#10;150;412;${hoje()};Curral 2&#10;151;398;${hoje()};Curral 2"></textarea>
+    <div class="row" style="margin-top:8px"><button class="s">Conferir leituras</button></div></form>
+    ${importPrevia?painelPrevia():''}
+  </div>
+  <h2>Brincos por curral</h2>
+  ${porCurral.length?`<div class="card tw"><table><tr><th>Curral</th><th>Lote</th><th class="n">Animais</th><th>Brincos</th></tr>${porCurral.map(({c,lc})=>lc.map((x,i)=>`<tr><td>${i===0?`<b>${esc(c.nome)}</b>`:''}</td><td>${esc(x.l.nome)}</td><td class="n">${x.n||'–'}</td><td>${x.n?esc(x.f):'<span class="muted">sem brincos cadastrados</span>'}</td></tr>`).join('')).join('')}</table></div>`:'<p class="muted">Nenhum lote ativo.</p>'}
+  <p class="muted">Para cadastrar uma faixa inteira de uma vez (ex.: 150 a 190), use Lotes › Animais.</p>`;
+};
+function cartaoAnimal(a){
+  const l = porId('lotes', a.loteId)||{}, c = porId('currais', l.curralId), up = ultimoPeso(a);
+  const outros = lotesAtivos().filter(x=>x.id!==a.loteId);
+  return `<div class="card form"><div class="entre"><div class="row" style="flex-wrap:nowrap;gap:12px"><span class="brinco">${esc(a.brinco)}</span><div><h3>${esc(l.nome||'sem lote')}</h3><span class="muted">${c?esc(c.nome):'sem curral'}${a.qr&&a.qr!==a.brinco?` · código ${esc(a.qr)}`:''}</span></div></div>
+    <span class="chip ${a.status==='enfermaria'?'warn':a.status==='morto'?'danger':a.status==='vendido'?'':'ok'}">${STATUS_AN[a.status]||a.status}</span></div>
+    <div class="stats" style="margin-top:10px"><div><b>${up?nf(up.kg):'–'}</b><span>último peso kg${up&&up.data?' · '+dbr(up.data):''}</span></div><div><b>${a.pesoEntrada?nf(num(a.pesoEntrada)):'–'}</b><span>peso de entrada</span></div><div><b>${up&&a.pesoEntrada&&up.data&&l.dataEntrada&&dias(l.dataEntrada,up.data)>0?nf((up.kg-num(a.pesoEntrada))/dias(l.dataEntrada,up.data),2):'–'}</b><span>GMD kg/dia</span></div></div>
+    ${a.status==='ativo'||a.status==='enfermaria'?`<form class="f" style="margin-top:12px" onsubmit="acaoAnimal(event,'${a.id}')">
+      <label>Peso agora (kg)<input id="br-peso" name="peso" inputmode="decimal" placeholder="opcional"></label>
+      <label>Mudar para<select id="br-lote" name="lote"><option value="">Fica onde está</option>${outros.map(x=>{const cc=porId('currais',x.curralId);return `<option value="${x.id}">${esc(x.nome)}${cc?' · '+esc(cc.nome):''}</option>`;}).join('')}</select></label>
+      <div class="row" style="grid-column:1/-1"><button class="b">Salvar</button>${a.status==='ativo'?`<button type="button" class="s" onclick="enfermariaAnimal('${a.id}')">Mandar p/ enfermaria</button>`:''}<button type="button" class="s" onclick="lido=null;render()">Fechar</button></div></form>`:''}
+    ${a.historico&&a.historico.length?`<p class="rot" style="margin:14px 0 6px">Histórico</p><div class="tw"><table>${a.historico.slice().reverse().slice(0,8).map(h=>`<tr><td class="num">${dbr(h.data)}</td><td>${esc(h.txt)}</td></tr>`).join('')}</table></div>`:''}
+  </div>`;
+}
+function lerBrinco(cod){
+  const a = acharAnimal(cod);
+  if(!a){ lido=null; render(); toast(`Brinco ${String(cod).trim()} não cadastrado`); return; }
+  lido = a.id; render(); scrollTo(0,0);
+}
+function acaoAnimal(ev, aid){
+  const d = dadosForm(ev), a = porId('animais', aid); if(!a) return;
+  const h = hoje(); let n = 0;
+  if(num(d.peso)>0){ pesarAnimal(a, num(d.peso), h, 'leitura'); n++; }
+  if(d.lote && moverAnimal(a, d.lote, h, 'leitura')) n++;
+  salvar(); toast(n?'Animal atualizado':'Nada para salvar'); render();
+}
+function enfermariaAnimal(aid){
+  const a = porId('animais', aid); if(!a) return;
+  a.status='enfermaria'; (a.historico=a.historico||[]).push({data:hoje(), txt:'Enviado para a enfermaria'});
+  S.ocorrencias.push({id:id(), loteId:a.loteId, data:hoje(), tipo:'doente', cabecas:1, brinco:a.brinco, descricao:'Separado na leitura do brinco'});
+  salvar(); toast('Animal na enfermaria'); render();
+}
+// Câmera: usa o leitor de QR do próprio navegador (Android/Chrome). Sem ele, fica a digitação.
+async function abrirCamera(){
+  const box = document.getElementById('cam');
+  if(!('BarcodeDetector' in window) || !navigator.mediaDevices){ box.innerHTML = '<p class="muted">Este aparelho não lê QR pelo navegador. Use a câmera do celular para abrir o QR, ou digite o número.</p>'; return; }
+  try{
+    const det = new BarcodeDetector({formats:['qr_code','code_128','ean_13','data_matrix']});
+    const st = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    box.innerHTML = '<video id="cam-v" playsinline muted style="width:100%;max-width:420px;border-radius:12px;background:#000"></video><div class="row" style="margin-top:8px"><button type="button" class="s" onclick="fecharCamera()">Fechar câmera</button></div>';
+    const v = document.getElementById('cam-v'); v.srcObject = st; await v.play(); camAtiva = st;
+    const loop = async () => {
+      if(camAtiva!==st) return;
+      try{ const r = await det.detect(v); if(r[0]){ fecharCamera(); lerBrinco(r[0].rawValue); return; } }catch(e){}
+      setTimeout(loop, 250);
+    }; loop();
+  }catch(e){ box.innerHTML = '<p class="muted">Não foi possível abrir a câmera. Confira a permissão do navegador.</p>'; }
+}
+function fecharCamera(){ if(camAtiva){ camAtiva.getTracks().forEach(t=>t.stop()); camAtiva=null; } const b=document.getElementById('cam'); if(b) b.innerHTML=''; }
+
+// --- Importação de leituras (câmera com IA, balança, bastão) ---
+function lerArquivoLeituras(f){ if(!f) return; const r = new FileReader(); r.onload = () => previaLeituras(r.result); r.readAsText(f); }
+function dataLeitura(s){
+  s = String(s||'').trim(); if(!s) return hoje();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(m) return `${m[3].length===2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return hoje();
+}
+function linhasLeituras(txt){
+  txt = String(txt||'').trim(); if(!txt) return [];
+  if(/^[\[{]/.test(txt)){ try{ let j = JSON.parse(txt); if(!Array.isArray(j)) j = j.leituras||j.readings||j.data||[];
+    return j.map(o=>{ const k = Object.keys(o); const pega = re => { const c = k.find(x=>re.test(x)); return c?o[c]:''; };
+      return {brinco:pega(/brinco|tag|ear|animal|id|codigo|code/i), peso:pega(/peso|weight|kg/i), data:pega(/data|date|hora|time/i), local:pega(/local|curral|pen|camera|ponto|place|loc/i)}; }); }catch(e){ return []; } }
+  const ls = txt.split(/\r?\n/).filter(x=>x.trim());
+  const sep = [';','\t',','].find(s=>ls[0].includes(s)) || ';';
+  let cols = ls[0].split(sep).map(x=>x.trim().toLowerCase().replace(/^"|"$/g,''));
+  const idx = {brinco:0, peso:1, data:2, local:3};
+  const temCab = cols.some(c=>/[a-z]/.test(c) && !/^\d/.test(c)) && !acharAnimal(cols[0]);
+  if(temCab){
+    const f = re => cols.findIndex(c=>re.test(c));
+    idx.brinco = f(/brinco|tag|ear|animal|codigo|code|^id$/); idx.peso = f(/peso|weight|kg/); idx.data = f(/data|date|hora|time/); idx.local = f(/local|curral|pen|camera|câmera|ponto|place/);
+    if(idx.brinco<0) idx.brinco = 0;
+  }
+  return ls.slice(temCab?1:0).map(l=>{ const p = l.split(sep).map(x=>x.trim().replace(/^"|"$/g,'')); const g = i => i>=0 ? (p[i]||'') : '';
+    return {brinco:g(idx.brinco), peso:g(idx.peso), data:g(idx.data), local:g(idx.local)}; });
+}
+function previaLeituras(txt){
+  const rs = linhasLeituras(txt).filter(r=>String(r.brinco).trim());
+  if(!rs.length){ toast('Nenhuma leitura encontrada no arquivo'); return; }
+  const ls = lotesAtivos();
+  importPrevia = rs.map(r=>{
+    const a = acharAnimal(r.brinco), loc = String(r.local||'').trim(), kg = num(String(r.peso).replace(',','.'));
+    const c = loc ? S.currais.find(c=>normBrinco(c.nome)===normBrinco(loc) || normBrinco(c.nome).endsWith(normBrinco(loc))) : null;
+    let destino = '';
+    if(a && c){ const l = porId('lotes', a.loteId); if(!l || l.curralId!==c.id){ const ld = ls.find(x=>x.curralId===c.id); destino = ld?ld.id:''; } }
+    return {brinco:String(r.brinco).trim(), aid:a?a.id:'', kg:kg>0&&kg<2000?kg:0, data:dataLeitura(r.data), local:loc, destino, embarque:/embarq|caminh|saida|saída|truck/i.test(loc)};
+  });
+  render();
+}
+function painelPrevia(){
+  const P = importPrevia, ok = P.filter(r=>r.aid), novos = P.filter(r=>!r.aid);
+  return `<div style="margin-top:12px"><p><b>${P.length}</b> leituras: <b>${ok.length}</b> animais encontrados${novos.length?`, <b style="color:var(--warn)">${novos.length}</b> brinco(s) não cadastrado(s)`:''}. Data das leituras: ${[...new Set(P.map(r=>dbr(r.data)))].join(', ')}.</p>
+  <div class="tw"><table><tr><th>Brinco</th><th>Lote hoje</th><th class="n">Peso</th><th>O que acontece</th></tr>${P.slice(0,12).map(r=>{const a=r.aid?porId('animais',r.aid):null, l=a?porId('lotes',a.loteId):null, ld=r.destino?porId('lotes',r.destino):null;
+    const acts = []; if(r.kg) acts.push('registra peso'); if(ld) acts.push('muda p/ '+esc(ld.nome)); if(r.embarque) acts.push('anota no embarque'); if(r.local && !ld && !r.embarque && a) acts.push('anota local');
+    return `<tr><td><b>${esc(r.brinco)}</b></td><td>${l?esc(l.nome):'<span class="muted">não cadastrado</span>'}</td><td class="n">${r.kg?nf(r.kg):'–'}</td><td>${a?(acts.join(', ')||'só confere'):'<span class="muted">ignorado</span>'}</td></tr>`;}).join('')}</table></div>
+  ${P.length>12?`<p class="muted">Mostrando 12 de ${P.length} leituras.</p>`:''}
+  ${novos.length?`<label style="margin-top:10px">Brincos não cadastrados<select id="br-novos" name="novos"><option value="">Ignorar</option>${lotesAtivos().map(l=>`<option value="${l.id}">Cadastrar no ${esc(l.nome)}</option>`).join('')}</select></label>`:''}
+  <div class="row" style="margin-top:10px"><button class="b" onclick="aplicarLeituras()">Aplicar leituras</button><button class="s" onclick="importPrevia=null;render()">Cancelar</button></div></div>`;
+}
+function aplicarLeituras(){
+  const P = importPrevia||[]; const sel = document.getElementById('br-novos'), loteNovo = sel?sel.value:'';
+  let pesos=0, mov=0, novos=0; const tocados = new Set();
+  for(const r of P){
+    let a = r.aid ? porId('animais', r.aid) : null;
+    if(!a && loteNovo){ a = {id:id(), loteId:loteNovo, brinco:r.brinco, pesoEntrada:r.kg||'', status:'ativo', historico:[{data:r.data, txt:'Cadastrado por leitura'}]}; S.animais.push(a); novos++; }
+    if(!a) continue;
+    const origem = r.local ? `leitura ${r.local}` : 'leitura';
+    if(r.kg){ pesarAnimal(a, r.kg, r.data, origem); pesos++; tocados.add(a.loteId+'|'+r.data); }
+    if(r.destino && moverAnimal(a, r.destino, r.data, origem)) mov++;
+    else if(r.local && !r.kg) (a.historico=a.historico||[]).push({data:r.data, txt:r.embarque?(/^embarque$/i.test(r.local)?'Lido no embarque':`Lido no embarque (${r.local})`):`Lido em ${r.local}`});
+  }
+  // Se a maior parte do lote passou na balança no mesmo dia, vira a pesagem do lote.
+  let pesagens = 0;
+  for(const t of tocados){ const [lid, data] = t.split('|'); const l = porId('lotes', lid); if(!l) continue;
+    const ps = S.animais.filter(a=>a.loteId===lid && a.pesos && a.pesos.some(p=>p.data===data)).map(a=>a.pesos.filter(p=>p.data===data).pop().kg);
+    if(ps.length >= Math.max(3, cabecasAtuais(l)*0.5)){ S.pesagens = S.pesagens.filter(p=>!(p.loteId===lid && p.data===data && p.auto)); S.pesagens.push({id:id(), loteId:lid, data, pesoMedio:Math.round(ps.reduce((s,x)=>s+x,0)/ps.length), auto:true}); pesagens++; } }
+  importPrevia = null; salvar();
+  toast([pesos&&`${pesos} pesos`, mov&&`${mov} ${mov>1?'mudanças':'mudança'} de curral`, novos&&`${novos} ${novos>1?'animais novos':'animal novo'}`, pesagens&&`${pesagens} pesagem(ns) de lote`].filter(Boolean).join(', ') || 'Leituras conferidas');
+  render();
+}
+
+// ====================== Exemplo ======================
+function carregarExemplo(){
+  const h = hoje();
+  const c1={id:id(),nome:'Curral 1',ordem:1,area:1200,cocho:40,bebedouro:400}, c2={id:id(),nome:'Curral 2',ordem:2,area:1500,cocho:45,bebedouro:500}, c3={id:id(),nome:'Curral 3',ordem:3,area:900,cocho:30,bebedouro:300};
+  S.currais.push(c1,c2,c3);
+  const ing = (nome,inclusao,ms,custo)=>({nome,inclusao,ms,custo});
+  const d={id:id(),nome:'Terminação alto grão',ingredientes:[ing('Milho moído',52,88,1.15),ing('Farelo de soja',12,89,2.10),ing('Núcleo mineral',6,98,3.80),ing('Silagem de milho',30,33,0.28)]};
+  const d1={id:id(),nome:'Adaptação 1',ingredientes:[ing('Milho moído',30,88,1.15),ing('Farelo de soja',10,89,2.10),ing('Núcleo mineral',5,98,3.80),ing('Silagem de milho',55,33,0.28)]};
+  const d2={id:id(),nome:'Adaptação 2',ingredientes:[ing('Milho moído',42,88,1.15),ing('Farelo de soja',11,89,2.10),ing('Núcleo mineral',5,98,3.80),ing('Silagem de milho',42,33,0.28)]};
+  S.dietas.push(d,d1,d2);
+  S.estoque = {'milho moído':{nome:'Milho moído',kg:45000}, 'farelo de soja':{nome:'Farelo de soja',kg:4000}, 'núcleo mineral':{nome:'Núcleo mineral',kg:2500}, 'silagem de milho':{nome:'Silagem de milho',kg:180000}};
+  if(!S.config.fazenda) S.config.fazenda='Fazenda Exemplo';
+  const plano = [{dietaId:d1.id, ateDia:7},{dietaId:d2.id, ateDia:14}];
+  const l1={id:id(),nome:'Lote A – Nelore',codigo:'A',categoria:'Boi',curralId:c1.id,dietaId:d.id,plano,cabecas:95,dataEntrada:somaDias(h,-62),pesoEntrada:390,gmd:1.55,pesoAbate:540,custoCompra:'',ajuste:0,ativo:true};
+  const l2={id:id(),nome:'Lote B – Cruzado',codigo:'B',categoria:'Novilho',curralId:c2.id,dietaId:d.id,plano,cabecas:110,dataEntrada:somaDias(h,-25),pesoEntrada:360,gmd:1.6,pesoAbate:530,custoCompra:'',ajuste:0,ativo:true};
+  const l3={id:id(),nome:'Lote C – Recria',codigo:'C',categoria:'Garrote',fase:'Recria',curralId:c3.id,dietaId:d.id,plano,cabecas:80,dataEntrada:somaDias(h,-6),pesoEntrada:330,gmd:1.3,pesoAbate:520,custoCompra:'',ajuste:0,ativo:true};
+  S.lotes.push(l1,l2,l3);
+  for(const l of [l1,l2,l3]) aplicarProtocolo(l);
+  for(const s of S.sanidade) if(s.data < somaDias(h,-2)){ s.feito=true; s.dataFeito=s.data; }
+  S.pesagens.push({id:id(),loteId:l1.id,data:somaDias(h,-5),pesoMedio:478});
+  // Histórico de tratos dos últimos 5 dias, para os indicadores reais
+  for(let k=5;k>=1;k--) for(const l of [l1,l2,l3]){ const t=tratoLote(l), di=dietaInfo(t.dieta); S.fornecimentos.push({id:id(), loteId:l.id, data:somaDias(h,-k), trato:1, kgPrevisto:t.mnTotal, kgReal:t.mnTotal*(0.97+Math.random()*0.05), dietaId:t.dieta.id, custoKgMN:di.custoKgMN, msPct:di.msPct}); }
+  S.leituras.push({id:id(),loteId:l2.id,data:somaDias(h,-1),nota:3,obs:''});
+  S.leituras.push({id:id(),loteId:l2.id,data:h,nota:3,obs:'Bebedouro com pouca vazão'});
+  l2.ajuste = regra(3).ajuste*2;
+  S.ocorrencias.push({id:id(),loteId:l2.id,data:somaDias(h,-1),tipo:'doente',cabecas:2,brinco:'2087',descricao:'Tosse e secreção nasal'});
+  S.animais.push({id:id(), loteId:l2.id, brinco:'2087', pesoEntrada:355, status:'enfermaria', historico:[{data:somaDias(h,-1), txt:'Animal doente: tosse e secreção nasal'}]});
+  for(let b=150;b<=189;b++) S.animais.push({id:id(), loteId:l1.id, brinco:String(b), qr:'0760001234'+String(b).padStart(5,'0'), pesoEntrada:370+((b*37)%45), status:'ativo', historico:[{data:l1.dataEntrada, txt:'Entrada no lote'}]});
+  S.despesas.push({id:id(), loteId:l1.id, data:somaDias(h,-60), tipo:'Frete', valor:4800, descricao:'Transporte de entrada'});
+  salvar(); toast('Exemplo carregado'); render();
+}
+
+// ====================== Início ======================
+carregar();
+if(S.config.papel==='peao') aba='trato';
+addEventListener('online', ()=>{ rede(); if(S.config.urlPrecos && dias(S.precos.atualizadoEm,hoje())>=1) buscarPrecos(); atualizarClima(true); });
+addEventListener('offline', rede);
+render();
+if(!S.clima || (S.clima.atualizadoEm||'').slice(0,10)!==hoje()) atualizarClima(true);
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  try { navigator.serviceWorker.register('sw.js').catch(()=>{}); } catch(e){}
+}
+</script>
+</body>
+</html>
